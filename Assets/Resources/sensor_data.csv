@@ -1,0 +1,10 @@
+sensor_id,location_x,location_y,season,temperature,humidity,light,soil_moisture,plant_type
+S1,1,1,Dry,34,60,800,30,Kochchi
+S2,2,1,Dry,36,55,850,28,Kochchi
+S3,3,1,Dry,38,50,900,25,Kochchi
+S4,1,2,Moderate,30,65,700,40,Kochchi
+S5,2,2,Moderate,29,70,650,45,Kochchi
+S6,3,2,Moderate,31,68,720,42,Kochchi
+S7,1,3,Rainy,27,80,500,60,Kochchi
+S8,2,3,Rainy,26,85,480,65,Kochchi
+S9,3,3,Rainy,28,78,520,62,Kochchi
