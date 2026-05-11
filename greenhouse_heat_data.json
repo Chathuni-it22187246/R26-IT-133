@@ -1,0 +1,139 @@
+{
+  "greenhouseId": "GH_001",
+  "name": "Main Greenhouse",
+  "dimensions": {
+    "x": 50,
+    "y": 5,
+    "z": 30
+  },
+  "sensors": [
+    {
+      "sensorId": "S_001",
+      "position": { "x": 10, "y": 1, "z": 10 },
+      "temperature": 28.5,
+      "humidity": 65
+    },
+    {
+      "sensorId": "S_002",
+      "position": { "x": 25, "y": 1, "z": 15 },
+      "temperature": 32.0,
+      "humidity": 55
+    },
+    {
+      "sensorId": "S_003",
+      "position": { "x": 40, "y": 1, "z": 20 },
+      "temperature": 25.0,
+      "humidity": 70
+    }
+  ],
+  "currentSeason": "Dry",
+  "seasonalPatterns": {
+    "Dry": {
+      "season": "Dry",
+      "temperatureRange": [25, 38],
+      "humidityRange": [30, 50],
+      "zones": [
+        {
+          "zoneId": "Z_HIGH_1",
+          "position": { "x": 25, "y": 2, "z": 15 },
+          "radius": 8,
+          "currentTemperature": 35,
+          "heatLevel": 2,
+          "zoneColor": { "r": 1, "g": 0, "b": 0, "a": 0.4 }
+        },
+        {
+          "zoneId": "Z_MOD_1",
+          "position": { "x": 40, "y": 2, "z": 20 },
+          "radius": 6,
+          "currentTemperature": 28,
+          "heatLevel": 1,
+          "zoneColor": { "r": 1, "g": 1, "b": 0, "a": 0.4 }
+        },
+        {
+          "zoneId": "Z_NORMAL_1",
+          "position": { "x": 10, "y": 2, "z": 10 },
+          "radius": 7,
+          "currentTemperature": 24,
+          "heatLevel": 0,
+          "zoneColor": { "r": 0, "g": 1, "b": 0, "a": 0.4 }
+        }
+      ],
+      "heatFlows": [
+        {
+          "startPosition": { "x": 25, "y": 2.5, "z": 15 },
+          "endPosition": { "x": 40, "y": 2.5, "z": 20 },
+          "intensity": 0.8,
+          "temperature": 32
+        },
+        {
+          "startPosition": { "x": 40, "y": 2.5, "z": 20 },
+          "endPosition": { "x": 10, "y": 2.5, "z": 10 },
+          "intensity": 0.5,
+          "temperature": 26
+        }
+      ]
+    },
+    "Rainy": {
+      "season": "Rainy",
+      "temperatureRange": [18, 28],
+      "humidityRange": [70, 95],
+      "zones": [
+        {
+          "zoneId": "Z_HIGH_R",
+          "position": { "x": 35, "y": 2, "z": 18 },
+          "radius": 5,
+          "currentTemperature": 26,
+          "heatLevel": 1,
+          "zoneColor": { "r": 1, "g": 1, "b": 0, "a": 0.4 }
+        },
+        {
+          "zoneId": "Z_NORMAL_R",
+          "position": { "x": 15, "y": 2, "z": 12 },
+          "radius": 8,
+          "currentTemperature": 20,
+          "heatLevel": 0,
+          "zoneColor": { "r": 0, "g": 1, "b": 0, "a": 0.4 }
+        }
+      ],
+      "heatFlows": [
+        {
+          "startPosition": { "x": 35, "y": 2.5, "z": 18 },
+          "endPosition": { "x": 15, "y": 2.5, "z": 12 },
+          "intensity": 0.4,
+          "temperature": 23
+        }
+      ]
+    },
+    "Moderate": {
+      "season": "Moderate",
+      "temperatureRange": [20, 30],
+      "humidityRange": [50, 70],
+      "zones": [
+        {
+          "zoneId": "Z_MOD_M",
+          "position": { "x": 25, "y": 2, "z": 15 },
+          "radius": 7,
+          "currentTemperature": 27,
+          "heatLevel": 1,
+          "zoneColor": { "r": 1, "g": 1, "b": 0, "a": 0.4 }
+        },
+        {
+          "zoneId": "Z_NORMAL_M",
+          "position": { "x": 15, "y": 2, "z": 10 },
+          "radius": 8,
+          "currentTemperature": 22,
+          "heatLevel": 0,
+          "zoneColor": { "r": 0, "g": 1, "b": 0, "a": 0.4 }
+        }
+      ],
+      "heatFlows": [
+        {
+          "startPosition": { "x": 25, "y": 2.5, "z": 15 },
+          "endPosition": { "x": 15, "y": 2.5, "z": 10 },
+          "intensity": 0.6,
+          "temperature": 25
+        }
+      ]
+    }
+  }
+}
