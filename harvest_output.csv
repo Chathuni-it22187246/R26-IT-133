@@ -1,0 +1,6 @@
+sensor_id,temperature,humidity,light,soil_moisture,fruit_hue,environment_score,fruit_status,final_status
+S1,30,65,700,45,5,100,Ready,Ready to Harvest
+S2,31,63,720,42,8,100,Ready,Ready to Harvest
+S3,29,68,680,44,7,100,Ready,Ready to Harvest
+S4,35,50,900,30,40,0,Not Ready,Ready to Harvest
+S5,34,55,850,35,45,0,Not Ready,Ready to Harvest
