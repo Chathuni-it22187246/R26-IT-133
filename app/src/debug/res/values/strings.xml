@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sensor_preview_launcher">C1 Preview (Debug)</string>
+    <string name="sensor_preview_coverage_not_ready">View Coverage is not in this debug preview.</string>
+</resources>
