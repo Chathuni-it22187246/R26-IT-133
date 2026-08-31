@@ -1,0 +1,20 @@
+Anthracnose
+Bacterial Canker
+Bacterial Leaf Spot
+Bacterial Wilt
+Blossom End Rot
+Cucumber Mosaic
+Downy Mildew
+Early Blight
+Edema
+Fusarium Wilt
+Gray Mold
+Heat Stress
+Late Blight
+Leaf Spot
+Mosaic Virus
+Nutrient Deficiency
+Powdery Mildew
+Root Rot
+Soft Rot
+Tomato Yellow Leaf Curl
