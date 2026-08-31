@@ -1,0 +1,14 @@
+﻿crop_type,variety,growth_habit,documented_ripe_color,average_fruit_weight_g,fruit_shape,yield_t_ha,bacterial_wilt_response,leaf_curl_response,other_notes,expected_maturity_min_days,expected_maturity_max_days,maturity_status,source_url
+Tomato,HORDI Tomato hybrid 03,indeterminate,red,,,55-60,,,long shelf life,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Thilina,semi-indeterminate,orange-red,85,high round heart-shaped,40,Moderately Resistant,,very thick pericarp; rare fruit cracking,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,KWR,bush,,50,,,Resistant,,thin pericarp; high post-harvest loss,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,T245,bush,orange-red,85,flat,20,Moderately Resistant,resistant/tolerant,relatively thick pericarp,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Ravi,bush,,60,heart-shaped,50,Moderately Susceptible,,no flower drop even at high temperature,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Tharindu,bush,dark red,45,round,40,Moderately Resistant,,suitable for sauce production,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Rajitha,bush,,100,slightly flat,30,Moderately Susceptible,Moderately Susceptible,,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Rashmi,bush,,185,moderately flat,28,Moderately Resistant,,moderately resistant to leaf blight,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Bathiya (F1),indeterminate,,85,,61,Moderately Susceptible,Field resistant,thick/shiny pericarp,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Maheshi-F1,,,125,slightly flat,58,Moderately Resistant,,thick pericarp,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Lanka Sour (Goraka Takkali),,,122,,29,Resistant,,,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,Lanka Cherry,indeterminate,,4,pear-shaped,17,Susceptible,,,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/
+Tomato,KC 1,bush,,55,flat,40,,,suited to dry zone / higher ambient temperature,,,TO_BE_SOURCED_OR_FIELD_VALIDATED,https://doa.gov.lk/hordi-variety1-tomato/

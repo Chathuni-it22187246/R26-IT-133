@@ -1,0 +1,51 @@
+package com.greenhands.app.harvest.model
+
+/**
+ * Row from 05_real_observations_updated.csv.
+ * Schema-ready for future real scans; blank cells remain null.
+ */
+data class ObservationRecord(
+    val recordId: String?,
+    val plantId: String?,
+    val cropType: String?,
+    val variety: String?,
+    val plantingOrTransplantDate: String?,
+    val scanDatetime: String?,
+    val daysAfterPlantingOrTransplant: Int?,
+    val temperatureC: Double?,
+    val humidityPercent: Double?,
+    val fruitImageFile: String?,
+    val fruitHueMean: Double?,
+    val fruitSaturationMean: Double?,
+    val fruitValueMean: Double?,
+    val fruitGreenPercent: Double?,
+    val fruitYellowPercent: Double?,
+    val fruitRedPercent: Double?,
+    val fruitBrownDarkPercent: Double?,
+    val fruitSpotPercent: Double?,
+    val fruitDamageDetected: Boolean?,
+    val ripenessStage: String?,
+    val fruitQualityStatus: String?,
+    val leafImageFile: String?,
+    val leafGreenPercent: Double?,
+    val leafYellowPercent: Double?,
+    val leafBrownPercent: Double?,
+    val leafWhitePercent: Double?,
+    val leafSpotPercent: Double?,
+    val leafSpotCount: Int?,
+    val leafCurlDetected: Boolean?,
+    val leafWiltingDetected: Boolean?,
+    val lesionPattern: String?,
+    val possibleDisease: String?,
+    val diseaseConfidencePercent: Double?,
+    val plantHealthStatus: String?,
+    val sampleNumber: Int?,
+    val ripeSampleCount: Int?,
+    val maturityStatus: String?,
+    val estimatedDaysRemaining: Int?,
+    val harvestDecision: String?,
+    val decisionReason: String?,
+    val expertOrFarmerLabel: String?,
+    val observerNotes: String?,
+    val dataOrigin: String?
+)
