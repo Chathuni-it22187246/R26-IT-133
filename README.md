@@ -29,7 +29,7 @@ The project uses a simulated greenhouse environment to explore how sensor placem
 - Sensor placement recommendations and placement comparisons.
 - AR visualization using Kotlin, Jetpack Compose, ARCore, and SceneView.
 
-### 2. Heat Distribution
+### 2. Heatwave Analysis and Detection
 
 **Research contribution:** Nissanka N.W.W.U. — IT22137296
 
