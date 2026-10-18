@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<incidents format="6" by="lint 8.5.1" type="incidents">
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.core:core-ktx than 1.13.1 is available: 1.19.0">
+        <fix-replace
+            description="Change to 1.19.0"
+            family="Update versions"
+            oldString="1.13.1"
+            replacement="1.19.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="4"
+            column="11"
+            startOffset="52"
+            endLine="4"
+            endColumn="19"
+            endOffset="60"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.ext:junit than 1.2.1 is available: 1.3.0">
+        <fix-replace
+            description="Change to 1.3.0"
+            family="Update versions"
+            oldString="1.2.1"
+            replacement="1.3.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="6"
+            column="16"
+            startOffset="93"
+            endLine="6"
+            endColumn="23"
+            endOffset="100"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.test.espresso:espresso-core than 3.6.1 is available: 3.7.0">
+        <fix-replace
+            description="Change to 3.7.0"
+            family="Update versions"
+            oldString="3.6.1"
+            replacement="3.7.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="7"
+            column="16"
+            startOffset="116"
+            endLine="7"
+            endColumn="23"
+            endOffset="123"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.8.3 is available: 2.11.0">
+        <fix-replace
+            description="Change to 2.11.0"
+            family="Update versions"
+            oldString="2.8.3"
+            replacement="2.11.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="8"
+            column="23"
+            startOffset="146"
+            endLine="8"
+            endColumn="30"
+            endOffset="153"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.activity:activity-compose than 1.9.0 is available: 1.13.0">
+        <fix-replace
+            description="Change to 1.13.0"
+            family="Update versions"
+            oldString="1.9.0"
+            replacement="1.13.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="9"
+            column="19"
+            startOffset="172"
+            endLine="9"
+            endColumn="26"
+            endOffset="179"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.compose:compose-bom than 2024.04.01 is available: 2026.08.00">
+        <fix-replace
+            description="Change to 2026.08.00"
+            family="Update versions"
+            oldString="2024.04.01"
+            replacement="2026.08.00"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="10"
+            column="14"
+            startOffset="193"
+            endLine="10"
+            endColumn="26"
+            endOffset="205"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.navigation:navigation-compose than 2.7.7 is available: 2.10.0">
+        <fix-replace
+            description="Change to 2.10.0"
+            family="Update versions"
+            oldString="2.7.7"
+            replacement="2.10.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="11"
+            column="21"
+            startOffset="226"
+            endLine="11"
+            endColumn="28"
+            endOffset="233"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.lifecycle:lifecycle-viewmodel-compose than 2.8.3 is available: 2.11.0">
+        <fix-replace
+            description="Change to 2.11.0"
+            family="Update versions"
+            oldString="2.8.3"
+            replacement="2.11.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="8"
+            column="23"
+            startOffset="146"
+            endLine="8"
+            endColumn="30"
+            endOffset="153"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.1.1 is available: 1.2.1">
+        <fix-replace
+            description="Change to 1.2.1"
+            family="Update versions"
+            oldString="1.1.1"
+            replacement="1.2.1"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="12"
+            column="24"
+            startOffset="257"
+            endLine="12"
+            endColumn="31"
+            endOffset="264"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-core than 1.3.4 is available: 1.6.2">
+        <fix-replace
+            description="Change to 1.6.2"
+            family="Update versions"
+            oldString="1.3.4"
+            replacement="1.6.2"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="11"
+            startOffset="591"
+            endLine="19"
+            endColumn="18"
+            endOffset="598"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-camera2 than 1.3.4 is available: 1.6.2">
+        <fix-replace
+            description="Change to 1.6.2"
+            family="Update versions"
+            oldString="1.3.4"
+            replacement="1.6.2"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="11"
+            startOffset="591"
+            endLine="19"
+            endColumn="18"
+            endOffset="598"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-lifecycle than 1.3.4 is available: 1.6.2">
+        <fix-replace
+            description="Change to 1.6.2"
+            family="Update versions"
+            oldString="1.3.4"
+            replacement="1.6.2"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="11"
+            startOffset="591"
+            endLine="19"
+            endColumn="18"
+            endOffset="598"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.camera:camera-view than 1.3.4 is available: 1.6.2">
+        <fix-replace
+            description="Change to 1.6.2"
+            family="Update versions"
+            oldString="1.3.4"
+            replacement="1.6.2"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="19"
+            column="11"
+            startOffset="591"
+            endLine="19"
+            endColumn="18"
+            endOffset="598"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-runtime than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="20"
+            column="8"
+            startOffset="606"
+            endLine="20"
+            endColumn="15"
+            endOffset="613"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-ktx than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="20"
+            column="8"
+            startOffset="606"
+            endLine="20"
+            endColumn="15"
+            endOffset="613"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of androidx.room:room-compiler than 2.6.1 is available: 2.8.4">
+        <fix-replace
+            description="Change to 2.8.4"
+            family="Update versions"
+            oldString="2.6.1"
+            replacement="2.8.4"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="20"
+            column="8"
+            startOffset="606"
+            endLine="20"
+            endColumn="15"
+            endOffset="613"/>
+    </incident>
+
+    <incident
+        id="GradleDependency"
+        severity="warning"
+        message="A newer version of com.google.firebase:firebase-bom than 33.7.0 is available: 34.18.0">
+        <fix-replace
+            description="Change to 34.18.0"
+            family="Update versions"
+            oldString="33.7.0"
+            replacement="34.18.0"
+            priority="0"/>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="24"
+            column="15"
+            startOffset="700"
+            endLine="24"
+            endColumn="23"
+            endOffset="708"/>
+    </incident>
+
+    <incident
+        id="AndroidGradlePluginVersion"
+        severity="warning"
+        message="A newer version of com.android.application than 8.5.1 is available: 9.3.2. (There is also a newer version of 8.5.𝑥 available, if upgrading to 9.3.2 is difficult: 8.5.2)">
+        <fix-alternatives>
+            <fix-replace
+                description="Change to 9.3.2"
+                family="Update versions"
+                oldString="8.5.1"
+                replacement="9.3.2"
+                priority="0"/>
+            <fix-replace
+                description="Change to 8.5.2"
+                family="Update versions"
+                robot="true"
+                independent="true"
+                oldString="8.5.1"
+                replacement="8.5.2"
+                priority="0"/>
+        </fix-alternatives>
+        <location
+            file="../gradle/libs.versions.toml"
+            line="2"
+            column="7"
+            startOffset="17"
+            endLine="2"
+            endColumn="14"
+            endOffset="24"/>
+    </incident>
+
+</incidents>

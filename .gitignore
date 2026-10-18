@@ -16,3 +16,14 @@ local.properties
 
 build-*.txt
 .idea/
+
+# Android generated files
+**/build/
+**/.gradle/
+local.properties
+**/.cxx/
+**/.externalNativeBuild/
+
+
+# Firebase local configuration
+app/google-services.json
