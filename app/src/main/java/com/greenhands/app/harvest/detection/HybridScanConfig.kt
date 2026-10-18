@@ -17,5 +17,12 @@ object HybridScanConfig {
      * instead of hybrid validation. Default false — normal user scans work
      * without TFLite detection.
      */
-    const val USE_EXPERIMENTAL_TFLITE_DETECTOR: Boolean = false
+    const val USE_EXPERIMENTAL_TFLITE_DETECTOR: Boolean = true
+
+    /**
+     * Optional multi-tomato cluster analysis. Default false so Crop Scan still
+     * locks, crops, and decides on one fruit. Enabling this does not change
+     * live capture or UI until a separate display path is approved.
+     */
+    const val ENABLE_MULTI_TOMATO_CLUSTER_PROCESSING: Boolean = false
 }

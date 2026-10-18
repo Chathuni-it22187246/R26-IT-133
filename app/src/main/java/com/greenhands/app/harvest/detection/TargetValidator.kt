@@ -5,6 +5,11 @@ import kotlin.math.abs
 /**
  * Validates a detector output against the scan's intended target.
  * Stability is applied separately by [StabilityTracker].
+ *
+ * Single Tomato Scan ([ScanTargetType.TOMATO_FRUIT]) uses
+ * [SingleTomatoFruitSelector] so implausible / opposite-edge-clamped fruit
+ * boxes are not lock candidates. Leaf Scan keeps max-confidence expected
+ * hits unchanged. Cluster Scan does not use this validator.
  */
 class TargetValidator(
     private val calibration: TargetDetectionCalibration = TargetDetectionCalibration.PROJECT
@@ -26,9 +31,23 @@ class TargetValidator(
                 reason = TargetRejectReason.MODEL_UNAVAILABLE
             )
         }
-        val expectedHits = detections.filter { it.targetType == expected }
+        val expectedHits = if (expected == ScanTargetType.TOMATO_FRUIT) {
+            SingleTomatoFruitSelector.plausibleFruits(detections)
+        } else {
+            detections.filter { it.targetType == expected }
+        }
         val otherHits = detections.filter { it.targetType != expected }
-        val candidate = expectedHits.maxByOrNull { it.confidence }
+        val lockReady = expectedHits.filter { hit ->
+            hit.confidence >= calibration.minDetectionConfidence &&
+                isLargeEnough(hit) &&
+                isCentered(hit)
+        }
+        val candidate = if (expected == ScanTargetType.TOMATO_FRUIT) {
+            SingleTomatoFruitSelector.select(detections, calibration)
+        } else {
+            lockReady.maxByOrNull { it.confidence }
+                ?: expectedHits.maxByOrNull { it.confidence }
+        }
         if (candidate == null) {
             val wrong = otherHits.maxByOrNull { it.confidence }
             return if (wrong != null) {

@@ -157,14 +157,18 @@ class HarvestDecisionEngineTest {
     }
 
     @Test
-    fun mixedColorWithinMaturityIsReady() {
+    fun mixedColorWithinMaturityIsUncertain() {
         val result = engine.decideTomato(
             fruit(green = 33f, yellow = 10f, red = 33f, brown = 5f, valueMean = 0.55f),
             withinWindow()
         )
-        assertEquals(HarvestDecision.READY_TO_HARVEST, result.decision)
+        assertEquals(HarvestDecision.UNCERTAIN, result.decision)
+        assertEquals("UNCERTAIN", result.displayLabel)
         assertEquals(TomatoRipenessState.MIXED_UNCERTAIN, result.ripeness.state)
-        assertEquals(TomatoHarvestReasons.DATE_REACHED_HARVEST_COLOUR, result.harvestReasonLabel)
+        assertEquals(TomatoHarvestReasons.DATE_REACHED_MIXED_COLOUR, result.harvestReasonLabel)
+        assertFalse(result.scanRequired)
+        assertEquals(result.displayLabel, ArResultMapper.fromHarvest(result).status)
+        assertEquals(result.harvestReasonLabel, ArResultMapper.fromHarvest(result).detail)
     }
 
     @Test

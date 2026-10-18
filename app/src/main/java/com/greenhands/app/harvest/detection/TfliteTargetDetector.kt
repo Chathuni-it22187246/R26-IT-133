@@ -38,8 +38,25 @@ class TfliteTargetDetector(
     private val outputLayout: OutputLayout
     private val outputChannels: Int
     private val outputPredictions: Int
+    private val modelOutputShape: IntArray
+    private val tensorLayout: YoloTensorLayout
+    private val layoutFromShape: Boolean
+    private var letterboxArgb: IntArray? = null
+    private var inputFloats: FloatArray? = null
+    private var inputPackedBytes: ByteArray? = null
+    private var outputFloats: FloatArray? = null
+    private var outputQuantBytes: ByteArray? = null
+    private var channelMajorBuf: Array<FloatArray>? = null
+    private var predMajorBuf: Array<FloatArray>? = null
+    @Volatile
+    private var closed: Boolean = false
+    @Volatile
+    private var loggedFailure: Boolean = false
+    @Volatile
+    private var loggedScoreRange: Boolean = false
 
-    override val isModelReady: Boolean = true
+    override val isModelReady: Boolean
+        get() = !closed
 
     init {
         inputSpec = InputSpec.from(inputTensor.shape())
@@ -50,7 +67,8 @@ class TfliteTargetDetector(
         outputBuffer = ByteBuffer.allocateDirect(outputTensor.numBytes().coerceAtLeast(4))
             .order(ByteOrder.nativeOrder())
         outputLayout = OutputLayout.from(interpreter)
-        val outShape = outputTensor.shape()
+        modelOutputShape = outputTensor.shape()
+        val outShape = modelOutputShape
         if (outShape.size == 3) {
             val dim1 = outShape[1]
             val dim2 = outShape[2]
@@ -65,23 +83,38 @@ class TfliteTargetDetector(
             outputChannels = 6
             outputPredictions = 3549
         }
+        layoutFromShape = YoloOutputLayoutSelector.isFromShape(outShape)
+        tensorLayout = YoloOutputLayoutSelector.resolve(outShape)
+        HarvestScanDiag.log(
+            HarvestScanDiag.tensorLine(
+                outputShape = outShape,
+                classCount = (outputChannels - 4).coerceAtLeast(0),
+                layout = tensorLayout,
+                fromShape = layoutFromShape
+            )
+        )
         Log.i(
             TomatoYoloDiagnostics.TAG,
             "model load inputShape=${inputTensor.shape().contentToString()} " +
                 "inputType=${inputTensor.dataType()} " +
                 "inputLayout=${if (inputSpec.nchw) "NCHW" else "NHWC"} " +
                 "inputHxW=${inputSpec.height}x${inputSpec.width} " +
-                "outputShape=${outputTensor.shape().contentToString()} " +
+                "outputShape=${outShape.contentToString()} " +
                 "outputType=${outputTensor.dataType()} " +
                 "outputBytes=${outputTensor.numBytes()} " +
                 "parsedLayout=${outputLayout.description()} " +
+                "decodeLayout=$tensorLayout fromShape=$layoutFromShape " +
                 "quantIn=${inputTensor.quantizationParams().scale}/${inputTensor.quantizationParams().zeroPoint} " +
                 "quantOut=${outputTensor.quantizationParams().scale}/${outputTensor.quantizationParams().zeroPoint} " +
                 "labels=$labels"
         )
     }
 
-    override fun detect(frame: HarvestArgbFrame, timestampMs: Long): List<TargetDetection> {
+    override fun detect(frame: HarvestArgbFrame, timestampMs: Long): List<TargetDetection> =
+        detectTimed(frame, timestampMs).detections
+
+    override fun detectTimed(frame: HarvestArgbFrame, timestampMs: Long): HarvestYoloDetectTiming {
+        if (closed) return HarvestYoloDetectTiming.NONE
         return try {
             when (val layout = outputLayout) {
                 is OutputLayout.DetectionApi -> detectDetectionApi(frame, timestampMs, layout)
@@ -89,21 +122,39 @@ class TfliteTargetDetector(
                 is OutputLayout.YoloDetectionsFirst -> detectYolo(frame, timestampMs)
             }
         } catch (t: Throwable) {
-            Log.e(TomatoYoloDiagnostics.TAG, "TFLite detect failed", t)
-            emptyList()
+            if (closed || SynchronizedTargetDetector.isInterpreterClosed(t)) {
+                if (!loggedFailure) {
+                    loggedFailure = true
+                    Log.w(TomatoYoloDiagnostics.TAG, "TFLite detect skipped; interpreter unavailable", t)
+                }
+            } else if (!loggedFailure) {
+                loggedFailure = true
+                Log.e(TomatoYoloDiagnostics.TAG, "TFLite detect failed", t)
+            }
+            HarvestYoloDetectTiming.NONE
         }
     }
 
     override fun close() {
+        if (closed) return
+        closed = true
         try {
             interpreter.close()
         } catch (_: Throwable) {
         }
     }
 
-    private fun detectYolo(frame: HarvestArgbFrame, timestampMs: Long): List<TargetDetection> {
-        val letterboxed = YoloLetterbox.fit(frame, inputSpec.width, inputSpec.height)
+    private fun detectYolo(frame: HarvestArgbFrame, timestampMs: Long): HarvestYoloDetectTiming {
+        val t0 = System.nanoTime()
+        val letterboxed = YoloLetterbox.fit(
+            frame = frame,
+            inputWidth = inputSpec.width,
+            inputHeight = inputSpec.height,
+            reuseArgb = letterboxArgb
+        )
+        letterboxArgb = letterboxed.frame.argb
         fillInput(letterboxed.frame)
+        val t1 = System.nanoTime()
         val logThis = TomatoYoloDiagnostics.shouldLog()
         if (logThis) {
             val (inMin, inMax) = inputBufferMinMax()
@@ -120,27 +171,36 @@ class TfliteTargetDetector(
         }
         outputBuffer.rewind()
         interpreter.run(inputBuffer, outputBuffer)
+        val t2 = System.nanoTime()
         val floats = readOutputFloats()
-        val channelMajor = YoloV8OutputParser.channelsFromFlat(
-            floats, outputChannels, outputPredictions, channelMajor = true
+        val channelMajor = tensorLayout == YoloTensorLayout.CHANNEL_MAJOR
+        val channels = if (channelMajor) {
+            channelMajorBuf = YoloV8OutputParser.fillChannelsFromFlat(
+                floats, outputChannels, outputPredictions, true, channelMajorBuf
+            )
+            channelMajorBuf!!
+        } else {
+            predMajorBuf = YoloV8OutputParser.fillChannelsFromFlat(
+                floats, outputChannels, outputPredictions, false, predMajorBuf
+            )
+            predMajorBuf!!
+        }
+        val layoutName = if (channelMajor) "channel-major [1,6,N]" else "pred-major [1,N,6]"
+        val rawMax0 = YoloV8OutputParser.maxClassScore(channels, 0)
+        val rawMax1 = YoloV8OutputParser.maxClassScore(channels, 1)
+        val rawMin0 = YoloV8OutputParser.minClassScore(channels, 0)
+        val rawMin1 = YoloV8OutputParser.minClassScore(channels, 1)
+        val sigmoidApplied = TomatoYoloDiagnostics.looksLikeLogits(
+            minOf(rawMin0, rawMin1),
+            maxOf(rawMax0, rawMax1)
         )
-        val predMajor = YoloV8OutputParser.channelsFromFlat(
-            floats, outputChannels, outputPredictions, channelMajor = false
-        )
-        val ch0 = YoloV8OutputParser.maxClassScore(channelMajor, 0)
-        val ch1 = YoloV8OutputParser.maxClassScore(channelMajor, 1)
-        val pr0 = YoloV8OutputParser.maxClassScore(predMajor, 0)
-        val pr1 = YoloV8OutputParser.maxClassScore(predMajor, 1)
-        val usePredMajor = maxOf(pr0, pr1) > maxOf(ch0, ch1) * 1.5f && maxOf(pr0, pr1) > 0.05f
-        val channels = if (usePredMajor) predMajor else channelMajor
-        val layoutName = if (usePredMajor) "pred-major [1,N,6]" else "channel-major [1,6,N]"
         val scoreFloor = if (TomatoYoloDiagnostics.USE_DEBUG_PARSE_FLOOR) {
             TomatoYoloDiagnostics.DEBUG_PARSE_FLOOR
         } else {
             calibration.detectorScoreFloor
         }
         val beforeNms = countAboveFloor(channels, scoreFloor)
-        val detections = YoloV8OutputParser.parseChannelsFirst(
+        val parsed = YoloV8OutputParser.parseChannelsFirstResult(
             channels = channels,
             inputWidth = inputSpec.width,
             inputHeight = inputSpec.height,
@@ -150,11 +210,30 @@ class TfliteTargetDetector(
             labels = labels,
             scoreFloor = scoreFloor
         )
+        val detections = parsed.detections
+        val activated = YoloV8OutputParser.activatedClassChannels(channels)
+        val interpMax0 = YoloV8OutputParser.maxClassScore(activated, 0)
+        val interpMax1 = YoloV8OutputParser.maxClassScore(activated, 1)
+        val (boxMin, boxMax) = YoloV8OutputParser.boxRange(channels)
+        if (!loggedScoreRange) {
+            loggedScoreRange = true
+            HarvestScanDiag.log(
+                HarvestScanDiag.scoreRangeLine(
+                    sigmoidApplied = sigmoidApplied,
+                    rawMax0 = rawMax0,
+                    rawMax1 = rawMax1,
+                    interpMax0 = interpMax0,
+                    interpMax1 = interpMax1,
+                    boxMin = boxMin,
+                    boxMax = boxMax
+                )
+            )
+        }
         if (logThis) {
             logYoloDump(
                 channels = channels,
-                channelMajorMax = ch0 to ch1,
-                predMajorMax = pr0 to pr1,
+                channelMajorMax = rawMax0 to rawMax1,
+                predMajorMax = 0f to 0f,
                 layoutName = layoutName,
                 transform = letterboxed.transform,
                 beforeNms = beforeNms,
@@ -162,25 +241,59 @@ class TfliteTargetDetector(
                 detections = detections
             )
         }
-        return detections
+        val t3 = System.nanoTime()
+        return HarvestYoloDetectTiming(
+            detections = detections,
+            preprocessMs = nsToMs(t0, t1),
+            inferMs = nsToMs(t1, t2),
+            parseMs = nsToMs(t2, t3),
+            rawAboveFloor = beforeNms,
+            layoutCached = layoutFromShape,
+            layout = tensorLayout,
+            layoutFromShape = layoutFromShape,
+            sigmoidApplied = sigmoidApplied,
+            rawMax0 = rawMax0,
+            rawMax1 = rawMax1,
+            interpMax0 = interpMax0,
+            interpMax1 = interpMax1,
+            outputShape = modelOutputShape,
+            preNmsFruit = parsed.preNmsFruit,
+            preNmsLeaf = parsed.preNmsLeaf,
+            nmsDropped = parsed.nmsDropped
+        )
     }
 
     private fun detectDetectionApi(
         frame: HarvestArgbFrame,
         timestampMs: Long,
         layout: OutputLayout.DetectionApi
-    ): List<TargetDetection> {
+    ): HarvestYoloDetectTiming {
+        val t0 = System.nanoTime()
         val scaled = ArgbFrameScaler.scale(frame, inputSpec.width, inputSpec.height)
         fillInput(scaled)
+        val t1 = System.nanoTime()
         interpreter.runForMultipleInputsOutputs(arrayOf(inputBuffer), layout.outputMap())
+        val t2 = System.nanoTime()
         if (TomatoYoloDiagnostics.shouldLog()) {
             Log.w(
                 TomatoYoloDiagnostics.TAG,
                 "Using DetectionApi path, not YOLOv8 [1,6,N]. output=${outputTensor.shape().contentToString()}"
             )
         }
-        return parseDetectionApi(layout, timestampMs)
+        val detections = parseDetectionApi(layout, timestampMs)
+        val t3 = System.nanoTime()
+        return HarvestYoloDetectTiming(
+            detections = detections,
+            preprocessMs = nsToMs(t0, t1),
+            inferMs = nsToMs(t1, t2),
+            parseMs = nsToMs(t2, t3),
+            rawAboveFloor = detections.size,
+            layoutCached = false
+        )
     }
+
+    private fun nsToMs(startNs: Long, endNs: Long): Long =
+        ((endNs - startNs) / 1_000_000L).coerceAtLeast(0L)
 
     private fun logYoloDump(
         channels: Array<FloatArray>,
@@ -256,23 +369,26 @@ class TfliteTargetDetector(
         return when (outputTensor.dataType()) {
             DataType.FLOAT32 -> {
                 val fb = outputBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer()
-                val values = FloatArray(fb.remaining())
+                val n = fb.remaining()
+                val values = reuseFloats(n)
                 fb.get(values)
                 values
             }
             DataType.UINT8, DataType.INT8 -> {
                 val scale = outputTensor.quantizationParams().scale
                 val zero = outputTensor.quantizationParams().zeroPoint
-                val bytes = ByteArray(outputBuffer.remaining())
-                outputBuffer.get(bytes)
-                FloatArray(bytes.size) { i ->
-                    val q = if (outputTensor.dataType() == DataType.UINT8) {
-                        bytes[i].toInt() and 0xFF
-                    } else {
-                        bytes[i].toInt()
-                    }
-                    (q - zero) * scale
+                val n = outputBuffer.remaining()
+                val bytes = outputQuantBytes?.takeIf { it.size == n } ?: ByteArray(n).also {
+                    outputQuantBytes = it
                 }
+                outputBuffer.get(bytes)
+                val values = reuseFloats(bytes.size)
+                val uint = outputTensor.dataType() == DataType.UINT8
+                for (i in bytes.indices) {
+                    val q = if (uint) bytes[i].toInt() and 0xFF else bytes[i].toInt()
+                    values[i] = (q - zero) * scale
+                }
+                values
             }
             else -> {
                 Log.w(
@@ -280,57 +396,33 @@ class TfliteTargetDetector(
                     "Unhandled output type ${outputTensor.dataType()}; treating as float32"
                 )
                 val fb = outputBuffer.order(ByteOrder.nativeOrder()).asFloatBuffer()
-                val values = FloatArray(fb.remaining())
+                val n = fb.remaining()
+                val values = reuseFloats(n)
                 fb.get(values)
                 values
             }
         }
     }
 
+    private fun reuseFloats(size: Int): FloatArray {
+        val existing = outputFloats
+        if (existing != null && existing.size == size) return existing
+        return FloatArray(size).also { outputFloats = it }
+    }
+
     private fun fillInput(frame: HarvestArgbFrame) {
-        inputBuffer.rewind()
-        val pixels = frame.argb
-        val width = inputSpec.width
-        val height = inputSpec.height
-        val count = width * height
-        if (inputSpec.nchw) {
-            if (inputIsQuantized) {
-                for (i in 0 until count) {
-                    inputBuffer.put(((pixels[i] shr 16) and 0xFF).toByte())
-                }
-                for (i in 0 until count) {
-                    inputBuffer.put(((pixels[i] shr 8) and 0xFF).toByte())
-                }
-                for (i in 0 until count) {
-                    inputBuffer.put((pixels[i] and 0xFF).toByte())
-                }
-            } else {
-                for (i in 0 until count) {
-                    inputBuffer.putFloat(((pixels[i] shr 16) and 0xFF) / 255f)
-                }
-                for (i in 0 until count) {
-                    inputBuffer.putFloat(((pixels[i] shr 8) and 0xFF) / 255f)
-                }
-                for (i in 0 until count) {
-                    inputBuffer.putFloat((pixels[i] and 0xFF) / 255f)
-                }
-            }
-        } else {
-            if (inputIsQuantized) {
-                for (pixel in pixels) {
-                    inputBuffer.put(((pixel shr 16) and 0xFF).toByte())
-                    inputBuffer.put(((pixel shr 8) and 0xFF).toByte())
-                    inputBuffer.put((pixel and 0xFF).toByte())
-                }
-            } else {
-                for (pixel in pixels) {
-                    inputBuffer.putFloat(((pixel shr 16) and 0xFF) / 255f)
-                    inputBuffer.putFloat(((pixel shr 8) and 0xFF) / 255f)
-                    inputBuffer.putFloat((pixel and 0xFF) / 255f)
-                }
-            }
-        }
-        inputBuffer.rewind()
+        val packed = YoloInputPacker.pack(
+            pixels = frame.argb,
+            width = inputSpec.width,
+            height = inputSpec.height,
+            nchw = inputSpec.nchw,
+            quantized = inputIsQuantized,
+            dest = inputBuffer,
+            reuseFloats = inputFloats,
+            reuseBytes = inputPackedBytes
+        )
+        inputFloats = packed.first
+        inputPackedBytes = packed.second
     }
 
     private fun inputBufferMinMax(): Pair<Float, Float> {
@@ -548,7 +640,8 @@ object TargetDetectorFactory {
      * call this unless [HybridScanConfig.USE_EXPERIMENTAL_TFLITE_DETECTOR] is true.
      */
     fun createExperimental(context: Context): TargetDetector {
-        return TfliteTargetDetector.tryOpen(context) ?: UnavailableTargetDetector
+        val opened = TfliteTargetDetector.tryOpen(context) ?: return UnavailableTargetDetector
+        return SynchronizedTargetDetector(opened)
     }
 
     @Deprecated(

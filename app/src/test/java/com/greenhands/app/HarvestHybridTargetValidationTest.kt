@@ -24,8 +24,8 @@ class HarvestHybridTargetValidationTest {
     private val captureCalibration = TargetDetectionCalibration.PROJECT
 
     @Test
-    fun experimentalTfliteFlagIsOffForNormalScans() {
-        assertFalse(HybridScanConfig.USE_EXPERIMENTAL_TFLITE_DETECTOR)
+    fun experimentalTfliteDetectorRemainsIntegrated() {
+        assertTrue(HybridScanConfig.USE_EXPERIMENTAL_TFLITE_DETECTOR)
     }
 
     @Test
@@ -314,6 +314,11 @@ class HarvestHybridTargetValidationTest {
         }
 
         assertEquals(1, feed(target))
+        assertEquals(HarvestScanPhase.SEARCHING, controller.onHybridFrame(
+            empty,
+            validator.validate(empty, ScanTargetType.TOMATO_FRUIT, now),
+            analyzing = false
+        ).phase)
         assertEquals(HarvestScanPhase.SEARCHING, controller.onHybridFrame(
             empty,
             validator.validate(empty, ScanTargetType.TOMATO_FRUIT, now),

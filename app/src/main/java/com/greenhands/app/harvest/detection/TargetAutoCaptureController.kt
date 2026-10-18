@@ -12,7 +12,10 @@ class TargetAutoCaptureController(
     private val modelReady: Boolean = true,
     private val calibration: TargetDetectionCalibration = TargetDetectionCalibration.PROJECT,
     private val validator: TargetValidator = TargetValidator(calibration),
-    private val stability: StabilityTracker = StabilityTracker(calibration),
+    private val stability: StabilityTracker = StabilityTracker(
+        calibration = calibration,
+        pauseOnSingleMiss = expected == ScanTargetType.TOMATO_FRUIT
+    ),
     private val cropper: TargetRegionCropper = TargetRegionCropper(calibration),
     private val clock: () -> Long = { System.currentTimeMillis() }
 ) {
@@ -41,14 +44,17 @@ class TargetAutoCaptureController(
         val stable = stability.isStable()
         val validation = result.toTargetValidationResult(stable)
         if (!validation.readyForManualCapture) {
-            capturedThisLock = false
-            focusedThisLock = false
+            if (!stability.paused) {
+                capturedThisLock = false
+                focusedThisLock = false
+            }
             return TargetCaptureTick(
                 phase = HarvestScanPhase.SEARCHING,
                 validation = validation,
                 detection = result.toDetection().takeIf { result.showGuideBox },
                 shouldRequestFocus = false,
-                captureFrame = null
+                captureFrame = null,
+                stabilityStreak = streak
             )
         }
         return finishTick(
@@ -71,7 +77,8 @@ class TargetAutoCaptureController(
                 validation = validator.validate(expected, emptyList(), modelReady = false),
                 detection = null,
                 shouldRequestFocus = false,
-                captureFrame = null
+                captureFrame = null,
+                stabilityStreak = 0
             )
         }
         val geometry = validator.validate(
@@ -90,14 +97,17 @@ class TargetAutoCaptureController(
             stable = stable
         )
         if (!validation.readyForManualCapture) {
-            capturedThisLock = false
-            focusedThisLock = false
+            if (!stability.paused) {
+                capturedThisLock = false
+                focusedThisLock = false
+            }
             return TargetCaptureTick(
                 phase = HarvestScanPhase.SEARCHING,
                 validation = validation,
                 detection = validation.detection,
                 shouldRequestFocus = false,
-                captureFrame = null
+                captureFrame = null,
+                stabilityStreak = streak
             )
         }
         return finishTick(
@@ -131,7 +141,8 @@ class TargetAutoCaptureController(
                 validation = validation,
                 detection = validation.detection,
                 shouldRequestFocus = shouldFocus,
-                captureFrame = crop
+                captureFrame = crop,
+                stabilityStreak = streak
             )
         }
         val phase = when {
@@ -146,7 +157,8 @@ class TargetAutoCaptureController(
             validation = validation,
             detection = validation.detection,
             shouldRequestFocus = shouldFocus,
-            captureFrame = null
+            captureFrame = null,
+            stabilityStreak = streak
         )
     }
 

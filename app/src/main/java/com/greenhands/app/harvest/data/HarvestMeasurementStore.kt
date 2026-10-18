@@ -1,5 +1,6 @@
 package com.greenhands.app.harvest.data
 
+import com.greenhands.app.harvest.detection.MultiTomatoClusterResult
 import com.greenhands.app.harvest.domain.PlantHealthStatus
 import com.greenhands.app.harvest.model.FruitColorMeasurement
 import com.greenhands.app.harvest.model.HarvestDecisionResult
@@ -19,6 +20,12 @@ object HarvestMeasurementStore {
 
     @Volatile
     var lastFruitDecision: HarvestDecisionResult? = null
+
+    @Volatile
+    var lastClusterResult: MultiTomatoClusterResult? = null
+
+    @Volatile
+    var lastScanCapture: HarvestScanCaptureInfo? = null
 
     @Volatile
     var lastLeafHealth: PlantHealthAssessment? = null
@@ -57,6 +64,8 @@ object HarvestMeasurementStore {
         lastFruit = null
         lastLeaf = null
         lastFruitDecision = null
+        lastClusterResult = null
+        lastScanCapture = null
         lastLeafHealth = null
         lastLeafScanId = null
         activeLeafScanHysteresis = null

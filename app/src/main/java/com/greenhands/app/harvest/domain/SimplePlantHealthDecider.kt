@@ -68,10 +68,13 @@ object SimplePlantHealthDecider {
                 }
             }
             else -> {
-                if (clearlyUnhealthy) {
-                    PlantHealthStatus.UNHEALTHY to "clear_abnormal_discoloration"
-                } else {
-                    PlantHealthStatus.HEALTHY to "usable_not_clearly_unhealthy"
+                when {
+                    clearlyUnhealthy ->
+                        PlantHealthStatus.UNHEALTHY to "clear_abnormal_discoloration"
+                    clearlyHealthy ->
+                        PlantHealthStatus.HEALTHY to "clear_healthy_colour"
+                    else ->
+                        PlantHealthStatus.UNCERTAIN to "borderline_discoloration"
                 }
             }
         }
@@ -177,7 +180,9 @@ object SimplePlantHealthDecider {
         }
         val confidenceOk = prediction.meetsThreshold &&
             prediction.confidence >= classifierCalibration.confidenceThreshold
-        if (!confidenceOk) {
+        val margin = top1Top2Margin(prediction)
+        val marginOk = margin >= classifierCalibration.minTop1Top2Margin
+        if (!confidenceOk || !marginOk) {
             return PlantHealthReasons.POSSIBLE_UNABLE to null
         }
         val name = prediction.displayName.ifBlank {
@@ -185,6 +190,12 @@ object SimplePlantHealthDecider {
         }
         val percent = (prediction.confidence * 100f).toInt().coerceIn(0, 100)
         return name to percent
+    }
+
+    private fun top1Top2Margin(prediction: TomatoDiseasePrediction): Float {
+        val ranked = prediction.topPredictions
+        if (ranked.size < 2) return prediction.confidence
+        return ranked[0].confidence - ranked[1].confidence
     }
 
     private fun unusableReason(

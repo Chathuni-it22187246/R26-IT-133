@@ -10,10 +10,10 @@ import kotlin.math.exp
 object TomatoYoloDiagnostics {
     const val TAG = "TomatoYoloDiag"
 
-    /** Temporary parse floor for logging / weak UI hints. Capture still uses 0.65 validation. */
+    /** Log-only parse floor. Live parse uses [TargetDetectionCalibration.detectorScoreFloor]. */
     const val DEBUG_PARSE_FLOOR = 0.01f
-    const val USE_DEBUG_PARSE_FLOOR = true
-    const val ENABLED = true
+    const val USE_DEBUG_PARSE_FLOOR = false
+    const val ENABLED = false
 
     @Volatile
     private var framesSeen: Int = 0

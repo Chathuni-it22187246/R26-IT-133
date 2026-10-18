@@ -23,6 +23,8 @@ object TomatoHarvestReasons {
         "Maturity period has been reached and fruit colour indicates sufficient maturity."
     const val DATE_REACHED_HARVEST_COLOUR =
         "Maturity period has been reached and fruit colour indicates harvest readiness."
+    const val DATE_REACHED_MIXED_COLOUR =
+        "Maturity period has been reached, but fruit colour is mixed or uncertain."
     const val EARLY_VISUALLY_RIPE =
         "The fruit appears visually ripe even though the expected maturity date has not yet been reached."
     const val HARVEST_STAGE_COLOR =

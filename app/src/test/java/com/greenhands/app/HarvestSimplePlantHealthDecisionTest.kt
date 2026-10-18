@@ -25,6 +25,16 @@ class HarvestSimplePlantHealthDecisionTest {
     }
 
     @Test
+    fun borderlineDiscolorationIsUncertainNotHealthy() {
+        val assessment = SimplePlantHealthDecider.decide(
+            healthy(green = 70f, yellow = 21f, brown = 6f, pale = 3f)
+        )
+        assertEquals(PlantHealthStatus.UNCERTAIN, assessment.status)
+        assertEquals("UNCERTAIN", assessment.simpleHealthStatusLabel)
+        assertTrue(assessment.reasons.any { it.contains("borderline_discoloration") })
+    }
+
+    @Test
     fun clearlyHealthyHsvIsHealthy() {
         val assessment = SimplePlantHealthDecider.decide(healthy(green = 78f, yellow = 8f, brown = 4f, pale = 4f))
         assertEquals(PlantHealthStatus.HEALTHY, assessment.status)
@@ -46,7 +56,7 @@ class HarvestSimplePlantHealthDecisionTest {
             healthy(green = 76f, yellow = 9f, brown = 5f, pale = 5f),
             healthy(green = 72f, yellow = 11f, brown = 6f, pale = 6f),
             healthy(green = 70f, yellow = 12f, brown = 7f, pale = 7f),
-            healthy(green = 68f, yellow = 14f, brown = 6f, pale = 8f)
+            healthy(green = 68f, yellow = 12f, brown = 6f, pale = 4f)
         )
         bases.forEach { hsv ->
             val assessment = SimplePlantHealthDecider.decide(
@@ -119,6 +129,24 @@ class HarvestSimplePlantHealthDecisionTest {
         assertEquals(PlantHealthReasons.VISIBLE_DARK_BROWN, assessment.liveCardIssueLine)
         assertTrue(assessment.showsNamedDisease)
         assertFalse(assessment.possibleDisease.contains("_"))
+    }
+
+    @Test
+    fun unhealthyHsvWithCloseTopTwoScoresDoesNotNameDisease() {
+        val assessment = SimplePlantHealthDecider.decide(
+            measurement = brownSpots(),
+            classifierAvailable = true,
+            prediction = diseasePrediction(
+                raw = "Early_blight",
+                confidence = 0.74f,
+                secondRaw = "Late_blight",
+                secondConfidence = 0.70f
+            ),
+            roiReliable = true
+        )
+        assertEquals(PlantHealthStatus.UNHEALTHY, assessment.status)
+        assertEquals(PlantHealthReasons.POSSIBLE_UNABLE, assessment.possibleDisease)
+        assertNull(assessment.confidencePercent)
     }
 
     @Test
@@ -364,9 +392,22 @@ class HarvestSimplePlantHealthDecisionTest {
     private fun brownSpots(): LeafColorMeasurement =
         unhealthy(green = 52f, yellow = 10f, brown = 22f, pale = 4f)
 
-    private fun diseasePrediction(raw: String, confidence: Float): TomatoDiseasePrediction {
+    private fun diseasePrediction(
+        raw: String,
+        confidence: Float,
+        secondRaw: String? = null,
+        secondConfidence: Float? = null
+    ): TomatoDiseasePrediction {
         val display = TomatoDiseaseLabels.displayName(raw)
         val index = TomatoDiseaseLabels.DEFAULT_ORDER.indexOf(raw).coerceAtLeast(0)
+        val top = mutableListOf(
+            TomatoDiseaseClassScore(index, raw, display, confidence)
+        )
+        if (secondRaw != null && secondConfidence != null) {
+            val secondDisplay = TomatoDiseaseLabels.displayName(secondRaw)
+            val secondIndex = TomatoDiseaseLabels.DEFAULT_ORDER.indexOf(secondRaw).coerceAtLeast(0)
+            top += TomatoDiseaseClassScore(secondIndex, secondRaw, secondDisplay, secondConfidence)
+        }
         return TomatoDiseasePrediction(
             classIndex = index,
             rawClassName = raw,
@@ -375,9 +416,7 @@ class HarvestSimplePlantHealthDecisionTest {
             meetsThreshold = confidence >= 0.70f,
             isHealthyClass = TomatoDiseaseLabels.isHealthy(raw),
             appliedSoftmax = true,
-            topPredictions = listOf(
-                TomatoDiseaseClassScore(index, raw, display, confidence)
-            )
+            topPredictions = top
         )
     }
 

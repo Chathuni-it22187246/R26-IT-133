@@ -16,6 +16,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.greenhands.app.R
 import com.greenhands.app.harvest.data.HarvestMeasurementStore
+import com.greenhands.app.harvest.detection.HarvestScanDiag
 import com.greenhands.app.harvest.detection.ScanTargetType
 import com.greenhands.app.harvest.detection.TomatoDiseaseClassifier
 import com.greenhands.app.harvest.detection.TomatoDiseaseClassifyResult
@@ -105,6 +106,17 @@ fun LeafScanScreen(
                     HarvestMeasurementStore.lastLeaf = result.first
                     HarvestMeasurementStore.lastLeafHealth = result.second
                     HarvestMeasurementStore.lastLeafScanId = UUID.randomUUID().toString()
+                    val capture = HarvestMeasurementStore.lastScanCapture
+                    HarvestScanDiag.log(
+                        HarvestScanDiag.leafLine(
+                            rotationDegrees = capture?.rotationDegrees ?: crop.rotationDegrees,
+                            frameWidth = capture?.frameWidth ?: crop.width,
+                            frameHeight = capture?.frameHeight ?: crop.height,
+                            detection = capture?.detection,
+                            measurement = result.first,
+                            assessment = result.second
+                        )
+                    )
                 } finally {
                     analyzing = false
                 }

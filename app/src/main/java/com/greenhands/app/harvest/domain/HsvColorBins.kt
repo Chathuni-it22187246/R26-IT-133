@@ -25,7 +25,8 @@ object HsvColorBins {
         if (h >= 40f && h < 70f) return HsvColorBin.YELLOW
         if (h < 15f || h >= 345f) return HsvColorBin.RED
         if (h >= 15f && h < 40f && v < 0.50f) return HsvColorBin.BROWN_DARK
-        if (h >= 15f && h < 40f) return HsvColorBin.RED
+        // Bright orange is harvest-stage colour (yellow/orange), not ripe red.
+        if (h >= 15f && h < 40f) return HsvColorBin.YELLOW
         return HsvColorBin.OTHER
     }
 }

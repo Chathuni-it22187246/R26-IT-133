@@ -2,6 +2,7 @@ package com.greenhands.app.harvest.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,7 +42,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -50,12 +56,20 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.greenhands.app.R
+import com.greenhands.app.harvest.data.HarvestMeasurementStore
+import com.greenhands.app.harvest.data.HarvestScanCaptureInfo
+import com.greenhands.app.harvest.detection.ClusterDisplayBox
+import com.greenhands.app.harvest.detection.ClusterFruitIdentity
+import com.greenhands.app.harvest.detection.CropScanMode
 import com.greenhands.app.harvest.detection.HarvestScanPhase
 import com.greenhands.app.harvest.detection.HybridScanConfig
 import com.greenhands.app.harvest.detection.HybridTargetValidator
 import com.greenhands.app.harvest.detection.ScanTargetType
+import com.greenhands.app.harvest.detection.SingleTomatoFruitSelector
+import com.greenhands.app.harvest.detection.SingleTomatoGuidance
 import com.greenhands.app.harvest.detection.TargetAutoCaptureController
 import com.greenhands.app.harvest.detection.TargetCaptureTick
+import com.greenhands.app.harvest.detection.TargetDetection
 import com.greenhands.app.harvest.detection.TargetDetectorFactory
 import com.greenhands.app.harvest.detection.TargetRejectReason
 import com.greenhands.app.harvest.detection.TargetRegionCropper
@@ -103,7 +117,11 @@ fun MockCameraScanScaffold(
     overlay: (@Composable () -> Unit)?,
     testTag: String,
     showDemoChip: Boolean = false,
-    captureEnabled: Boolean = true
+    captureEnabled: Boolean = true,
+    clusterMode: Boolean = false,
+    onClusterCapture: ((HarvestArgbFrame, List<TargetDetection>) -> Unit)? = null,
+    belowInstruction: (@Composable () -> Unit)? = null,
+    frozenClusterBoxes: List<ClusterDisplayBox>? = null
 ) {
     val context = LocalContext.current
     val cameraPermission = rememberHarvestCameraPermissionState()
@@ -132,8 +150,16 @@ fun MockCameraScanScaffold(
     captureAllowed.set(captureEnabled)
     val captureSink = remember { AtomicReference<(HarvestArgbFrame) -> Unit>({}) }
     captureSink.set(onValidatedCapture)
+    val clusterSink = remember {
+        AtomicReference<(HarvestArgbFrame, List<TargetDetection>) -> Unit>({ _, _ -> })
+    }
+    clusterSink.set(onClusterCapture ?: { _, _ -> })
+    val clusterModeFlag = remember { AtomicBoolean(false) }
+    clusterModeFlag.set(clusterMode)
     var latestTick by remember { mutableStateOf<TargetCaptureTick?>(null) }
     var latestFrame by remember { mutableStateOf<HarvestArgbFrame?>(null) }
+    var clusterDetections by remember { mutableStateOf<List<TargetDetection>>(emptyList()) }
+    var clusterPhase by remember { mutableStateOf(HarvestScanPhase.SEARCHING) }
     val session = remember(hybrid, experimentalDetector, controller, targetType) {
         HarvestTargetCameraSession(
             expected = targetType,
@@ -145,22 +171,68 @@ fun MockCameraScanScaffold(
                 latestTick = tick
                 latestFrame = frame
             },
-            onAutoCapture = { crop ->
+            onAutoCapture = { crop, frame, detection ->
+                HarvestMeasurementStore.lastScanCapture = HarvestScanCaptureInfo(
+                    frameWidth = frame.width,
+                    frameHeight = frame.height,
+                    rotationDegrees = frame.rotationDegrees,
+                    detection = detection
+                )
                 if (captureAllowed.get()) captureSink.get().invoke(crop)
+            },
+            clusterMode = clusterModeFlag,
+            onClusterTick = { fruits, frame, phase ->
+                clusterDetections = fruits
+                clusterPhase = phase
+                latestFrame = frame
+            },
+            onClusterAutoCapture = { frame, fruits ->
+                HarvestMeasurementStore.lastScanCapture = HarvestScanCaptureInfo(
+                    frameWidth = frame.width,
+                    frameHeight = frame.height,
+                    rotationDegrees = frame.rotationDegrees,
+                    detections = fruits
+                )
+                if (captureAllowed.get()) clusterSink.get().invoke(frame, fruits)
             }
         )
     }
+    LaunchedEffect(clusterMode) {
+        controller.resetLock()
+        session.clusterController.reset()
+        latestTick = null
+        clusterDetections = emptyList()
+        clusterPhase = HarvestScanPhase.SEARCHING
+    }
     val tick = latestTick
     val box = tick?.takeIf { it.validation.detected }?.detection?.boundingBox
-    val manualEnabled = captureEnabled &&
-        cameraPermission.granted &&
-        !analyzing &&
-        tick?.validation?.readyForManualCapture == true &&
-        tick.detection != null &&
-        latestFrame != null
+    val overlayBoxes: List<ClusterDisplayBox> = when {
+        clusterMode && hasResult && frozenClusterBoxes != null -> frozenClusterBoxes
+        clusterMode -> ClusterFruitIdentity.displayBoxes(clusterDetections)
+        targetType == ScanTargetType.TOMATO_FRUIT -> {
+            val fruitBox = SingleTomatoFruitSelector.overlayBox(tick?.validation?.detection)
+            listOfNotNull(fruitBox).map { ClusterDisplayBox(displayId = 0, box = it) }
+        }
+        else -> listOfNotNull(box).map { ClusterDisplayBox(displayId = 0, box = it) }
+    }
+    val manualEnabled = if (clusterMode) {
+        captureEnabled &&
+            cameraPermission.granted &&
+            !analyzing &&
+            clusterDetections.isNotEmpty() &&
+            latestFrame != null
+    } else {
+        captureEnabled &&
+            cameraPermission.granted &&
+            !analyzing &&
+            tick?.validation?.readyForManualCapture == true &&
+            tick.detection != null &&
+            latestFrame != null
+    }
     val displayStatus = when {
         !cameraPermission.granted -> statusText
         analyzing || hasResult -> statusText
+        clusterMode -> clusterLiveStatusText(clusterPhase, clusterDetections.size)
         else -> detectionStatusText(targetType, tick)
     }
 
@@ -174,6 +246,12 @@ fun MockCameraScanScaffold(
             HarvestCameraPreview(
                 frameBuffer = frameBuffer,
                 targetSession = session,
+                modifier = Modifier.fillMaxSize()
+            )
+            TargetBoundingBoxOverlay(
+                boxes = overlayBoxes,
+                frameWidth = latestFrame?.width ?: 0,
+                frameHeight = latestFrame?.height ?: 0,
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -192,6 +270,12 @@ fun MockCameraScanScaffold(
                     .fillMaxWidth()
                     .padding(horizontal = Spacing.xl)
             )
+            if (belowInstruction != null) {
+                Spacer(Modifier.height(Spacing.sm))
+                Box(Modifier.padding(horizontal = Spacing.xl)) {
+                    belowInstruction()
+                }
+            }
             Spacer(Modifier.height(Spacing.md))
             Box(
                 modifier = Modifier
@@ -205,7 +289,7 @@ fun MockCameraScanScaffold(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                if (!cameraPermission.showDeniedMessage && box == null && !hasResult) {
+                if (!cameraPermission.showDeniedMessage && overlayBoxes.isEmpty() && !hasResult) {
                     ScanFocusBrackets(
                         modifier = Modifier
                             .align(Alignment.Center)
@@ -214,17 +298,20 @@ fun MockCameraScanScaffold(
                             .padding(horizontal = Spacing.lg)
                     )
                 }
-                TargetBoundingBoxOverlay(
-                    box = box,
-                    modifier = Modifier.fillMaxSize()
-                )
                 if (!hasResult && cameraPermission.granted) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = Spacing.sm)
                     ) {
-                        TargetDetectionBanner(targetType = targetType, tick = tick)
+                        if (clusterMode) {
+                            ClusterDetectionBanner(
+                                fruitCount = clusterDetections.size,
+                                phase = clusterPhase
+                            )
+                        } else {
+                            TargetDetectionBanner(targetType = targetType, tick = tick)
+                        }
                     }
                 }
                 if (overlay != null && cameraPermission.granted && hasResult) {
@@ -258,9 +345,27 @@ fun MockCameraScanScaffold(
                 CaptureButton(
                     enabled = manualEnabled,
                     onClick = {
-                        val detection = tick?.detection ?: return@CaptureButton
                         val frame = latestFrame ?: return@CaptureButton
+                        if (clusterMode) {
+                            if (clusterDetections.isNotEmpty()) {
+                                HarvestMeasurementStore.lastScanCapture = HarvestScanCaptureInfo(
+                                    frameWidth = frame.width,
+                                    frameHeight = frame.height,
+                                    rotationDegrees = frame.rotationDegrees,
+                                    detections = clusterDetections
+                                )
+                                onClusterCapture?.invoke(frame, clusterDetections)
+                            }
+                            return@CaptureButton
+                        }
+                        val detection = tick?.detection ?: return@CaptureButton
                         if (tick.validation.readyForManualCapture) {
+                            HarvestMeasurementStore.lastScanCapture = HarvestScanCaptureInfo(
+                                frameWidth = frame.width,
+                                frameHeight = frame.height,
+                                rotationDegrees = frame.rotationDegrees,
+                                detection = detection
+                            )
                             onValidatedCapture(cropper.crop(frame, detection.boundingBox))
                         }
                     }
@@ -272,17 +377,199 @@ fun MockCameraScanScaffold(
 
 @Composable
 private fun TargetBoundingBoxOverlay(
-    box: com.greenhands.app.harvest.detection.NormalizedRect?,
+    boxes: List<ClusterDisplayBox>,
+    frameWidth: Int,
+    frameHeight: Int,
     modifier: Modifier = Modifier
 ) {
-    if (box == null) return
+    if (boxes.isEmpty()) return
     Canvas(modifier.testTag("harvest_target_box")) {
         val stroke = 3.dp.toPx()
-        drawRect(
-            color = ForestEmerald,
-            topLeft = Offset(box.left * size.width, box.top * size.height),
-            size = Size(box.width * size.width, box.height * size.height),
-            style = Stroke(width = stroke)
+        val labelPaint = android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 16.dp.toPx()
+            isFakeBoldText = true
+            setShadowLayer(6f, 0f, 1f, android.graphics.Color.BLACK)
+        }
+        boxes.forEach { item ->
+            val mapped = com.greenhands.app.harvest.detection.PreviewFillCenterMapper.mapToView(
+                box = item.box,
+                frameWidth = frameWidth,
+                frameHeight = frameHeight,
+                viewWidth = size.width.toInt(),
+                viewHeight = size.height.toInt()
+            )
+            val color = if (item.highlighted) AmberWarning else ForestEmerald
+            val left = mapped.left * size.width
+            val top = mapped.top * size.height
+            drawRect(
+                color = color,
+                topLeft = Offset(left, top),
+                size = Size(mapped.width * size.width, mapped.height * size.height),
+                style = Stroke(width = if (item.highlighted) stroke + 2.dp.toPx() else stroke)
+            )
+            if (item.displayId > 0) {
+                drawContext.canvas.nativeCanvas.drawText(
+                    item.displayId.toString(),
+                    left + 6.dp.toPx(),
+                    top + 18.dp.toPx(),
+                    labelPaint
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ClusterSnapshotPanel(
+    frame: HarvestArgbFrame,
+    boxes: List<ClusterDisplayBox>,
+    modifier: Modifier = Modifier
+) {
+    if (frame.width <= 0 || frame.height <= 0) return
+    val imageBitmap = remember(frame) {
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            frame.width,
+            frame.height,
+            android.graphics.Bitmap.Config.ARGB_8888
+        )
+        bitmap.setPixels(frame.argb, 0, frame.width, 0, 0, frame.width, frame.height)
+        bitmap.asImageBitmap()
+    }
+    val aspect = frame.width.toFloat() / frame.height.toFloat().coerceAtLeast(1f)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .aspectRatio(aspect)
+            .testTag("harvest_cluster_snapshot")
+    ) {
+        Image(
+            bitmap = imageBitmap,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.FillBounds
+        )
+        Canvas(Modifier.fillMaxSize().testTag("harvest_cluster_snapshot_boxes")) {
+            val stroke = 3.dp.toPx()
+            val labelPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 16.dp.toPx()
+                isFakeBoldText = true
+                setShadowLayer(6f, 0f, 1f, android.graphics.Color.BLACK)
+            }
+            boxes.forEach { item ->
+                val color = if (item.highlighted) AmberWarning else ForestEmerald
+                val left = item.box.left * size.width
+                val top = item.box.top * size.height
+                drawRect(
+                    color = color,
+                    topLeft = Offset(left, top),
+                    size = Size(item.box.width * size.width, item.box.height * size.height),
+                    style = Stroke(width = if (item.highlighted) stroke + 2.dp.toPx() else stroke)
+                )
+                if (item.displayId > 0) {
+                    drawContext.canvas.nativeCanvas.drawText(
+                        item.displayId.toString(),
+                        left + 6.dp.toPx(),
+                        top + 18.dp.toPx(),
+                        labelPaint
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClusterDetectionBanner(fruitCount: Int, phase: HarvestScanPhase) {
+    val headline = when {
+        phase == HarvestScanPhase.CAPTURING -> stringResource(R.string.harvest_detect_capturing)
+        phase == HarvestScanPhase.HOLD_STEADY -> stringResource(R.string.harvest_detect_hold_steady)
+        fruitCount > 0 -> stringResource(R.string.harvest_cluster_detected, fruitCount)
+        else -> stringResource(R.string.harvest_cluster_searching)
+    }
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.md)
+            .testTag("harvest_cluster_banner"),
+        shape = Radii.lg,
+        color = NightElevated.copy(alpha = 0.92f),
+        border = BorderStroke(GhStroke.hairline, ForestEmerald.copy(alpha = 0.4f))
+    ) {
+        Column(Modifier.padding(Spacing.md)) {
+            Text(headline, style = MaterialTheme.typography.titleMedium, color = NightText)
+            Spacer(Modifier.height(Spacing.xs))
+            Text(
+                stringResource(R.string.harvest_cluster_needs_detector),
+                style = MaterialTheme.typography.bodySmall,
+                color = NightText.copy(alpha = 0.8f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun clusterLiveStatusText(phase: HarvestScanPhase, fruitCount: Int): String {
+    return when (phase) {
+        HarvestScanPhase.CAPTURING -> stringResource(R.string.harvest_detect_capturing)
+        HarvestScanPhase.HOLD_STEADY -> stringResource(R.string.harvest_detect_hold_steady)
+        HarvestScanPhase.ANALYZING -> stringResource(R.string.harvest_scan_status_analyzing)
+        else -> if (fruitCount > 0) {
+            stringResource(R.string.harvest_cluster_detected, fruitCount)
+        } else {
+            stringResource(R.string.harvest_cluster_searching)
+        }
+    }
+}
+
+@Composable
+fun CropScanModeRow(
+    mode: CropScanMode,
+    onModeChange: (CropScanMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+    ) {
+        CropScanModeChip(
+            label = stringResource(R.string.harvest_scan_mode_single),
+            selected = mode == CropScanMode.SINGLE,
+            onClick = { onModeChange(CropScanMode.SINGLE) },
+            testTag = "harvest_scan_mode_single"
+        )
+        CropScanModeChip(
+            label = stringResource(R.string.harvest_scan_mode_cluster),
+            selected = mode == CropScanMode.CLUSTER,
+            onClick = { onModeChange(CropScanMode.CLUSTER) },
+            testTag = "harvest_scan_mode_cluster"
+        )
+    }
+}
+
+@Composable
+private fun CropScanModeChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    testTag: String
+) {
+    val border = if (selected) ForestEmerald else ForestEmerald.copy(alpha = 0.35f)
+    val background = if (selected) ForestEmerald.copy(alpha = 0.22f) else NightElevated.copy(alpha = 0.7f)
+    Surface(
+        modifier = Modifier
+            .testTag(testTag)
+            .clickable(onClick = onClick),
+        shape = Radii.sm,
+        color = background,
+        border = BorderStroke(GhStroke.hairline, border)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = NightText,
+            modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.sm)
         )
     }
 }
@@ -335,25 +622,17 @@ private fun TargetDetectionBanner(targetType: ScanTargetType, tick: TargetCaptur
 
 @Composable
 private fun hybridRejectHeadline(fruit: Boolean, reason: TargetRejectReason?): String? {
+    if (fruit) {
+        val res = SingleTomatoGuidance.stringRes(reason) ?: return null
+        return stringResource(res)
+    }
     return when (reason) {
-        TargetRejectReason.TARGET_TOO_SMALL -> if (fruit) {
-            stringResource(R.string.harvest_detect_too_small_fruit)
-        } else {
-            stringResource(R.string.harvest_detect_too_small_leaf)
-        }
-        TargetRejectReason.TARGET_NOT_CENTERED -> if (fruit) {
-            stringResource(R.string.harvest_detect_not_centered_fruit)
-        } else {
-            stringResource(R.string.harvest_detect_not_centered_leaf)
-        }
+        TargetRejectReason.TARGET_TOO_SMALL -> stringResource(R.string.harvest_detect_too_small_leaf)
+        TargetRejectReason.TARGET_NOT_CENTERED -> stringResource(R.string.harvest_detect_not_centered_leaf)
         TargetRejectReason.SHAPE_NOT_FRUIT_LIKE,
         TargetRejectReason.NO_FRUIT_LIKE_REGION,
         TargetRejectReason.INSUFFICIENT_COLOR_EVIDENCE,
-        TargetRejectReason.WRONG_TARGET -> if (fruit) {
-            stringResource(R.string.harvest_detect_not_fruit_like)
-        } else {
-            stringResource(R.string.harvest_detect_not_leaf_like)
-        }
+        TargetRejectReason.WRONG_TARGET,
         TargetRejectReason.SHAPE_NOT_LEAF_LIKE,
         TargetRejectReason.NO_LEAF_LIKE_REGION,
         TargetRejectReason.INSUFFICIENT_VEGETATION_EVIDENCE ->

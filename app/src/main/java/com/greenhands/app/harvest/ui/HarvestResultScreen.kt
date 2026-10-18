@@ -1,5 +1,6 @@
 package com.greenhands.app.harvest.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,12 +12,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import com.greenhands.app.R
 import com.greenhands.app.harvest.data.HarvestMeasurementStore
+import com.greenhands.app.harvest.detection.ClusterDisplayBox
+import com.greenhands.app.harvest.detection.ClusterScanSummary
+import com.greenhands.app.harvest.detection.MultiTomatoClusterResult
 import com.greenhands.app.harvest.domain.HarvestDecisionEngine
 import com.greenhands.app.harvest.model.HarvestDecisionResult
 import com.greenhands.app.harvest.model.hsvPercentLabel
@@ -38,16 +44,28 @@ fun HarvestResultScreen(
     val engine = remember { HarvestDecisionEngine() }
     val measured = HarvestMeasurementStore.lastFruit
     val storedDecision = HarvestMeasurementStore.lastFruitDecision
+    val clusterResult = HarvestMeasurementStore.lastClusterResult
     val harvestState by harvestViewModel.state.collectAsState()
     val saveStatus by harvestViewModel.fruitSaveStatus.collectAsState()
-    val decision = remember(measured, harvestState.maturity, storedDecision) {
-        storedDecision ?: engine.decideTomato(measured, harvestState.maturity)
+    val showCluster = clusterResult?.enabled == true
+    val decision = remember(measured, harvestState.maturity, storedDecision, showCluster) {
+        if (showCluster) null
+        else storedDecision ?: engine.decideTomato(measured, harvestState.maturity)
     }
-    LaunchedEffect(measured) {
-        harvestViewModel.prepareFruitSave(measured)
+    LaunchedEffect(measured, showCluster) {
+        if (!showCluster) harvestViewModel.prepareFruitSave(measured)
     }
-    val realDecision = !decision.scanRequired
-    val decisionColor = harvestDecisionColor(decision.decision, decision.scanRequired)
+    if (showCluster && clusterResult != null) {
+        ClusterHarvestResultScreen(
+            result = clusterResult,
+            onBack = onBack,
+            harvestViewModel = harvestViewModel
+        )
+        return
+    }
+    val resolved = decision ?: return
+    val realDecision = !resolved.scanRequired
+    val decisionColor = harvestDecisionColor(resolved.decision, resolved.scanRequired)
 
     ScreenScaffold(
         title = stringResource(R.string.harvest_result_title),
@@ -87,7 +105,7 @@ fun HarvestResultScreen(
             Spacer(Modifier.height(Spacing.md))
             ResultFieldsCard {
                 Text(
-                    decision.displayLabel,
+                    resolved.displayLabel,
                     style = MaterialTheme.typography.headlineSmall,
                     color = decisionColor,
                     modifier = Modifier.testTag("harvest_decision_value")
@@ -95,17 +113,17 @@ fun HarvestResultScreen(
                 Spacer(Modifier.height(Spacing.md))
                 ResultField(
                     stringResource(R.string.harvest_field_maturity_reason),
-                    decision.maturityReasonLabel
+                    resolved.maturityReasonLabel
                 )
                 Spacer(Modifier.height(Spacing.md))
                 ResultField(
                     stringResource(R.string.harvest_field_ripeness_evidence),
-                    decision.ripeness.label
+                    resolved.ripeness.label
                 )
                 Spacer(Modifier.height(Spacing.md))
                 ResultField(
                     stringResource(R.string.harvest_field_quality_status),
-                    decision.quality.label
+                    resolved.quality.label
                 )
             }
 
@@ -117,7 +135,7 @@ fun HarvestResultScreen(
             )
             Spacer(Modifier.height(Spacing.md))
             ResultFieldsCard {
-                decision.reasons.forEachIndexed { index, reason ->
+                resolved.reasons.forEachIndexed { index, reason ->
                     if (index > 0) Spacer(Modifier.height(Spacing.md))
                     Text(reason, style = MaterialTheme.typography.bodyMedium)
                 }
@@ -184,8 +202,130 @@ fun HarvestResultScreen(
             HarvestSaveSection(
                 canSave = realDecision,
                 saveStatus = saveStatus,
-                onSave = { harvestViewModel.saveFruitScan(decision) }
+                onSave = { harvestViewModel.saveFruitScan(resolved) }
             )
+        }
+    }
+}
+
+@Composable
+private fun ClusterHarvestResultScreen(
+    result: MultiTomatoClusterResult,
+    onBack: () -> Unit,
+    harvestViewModel: HarvestViewModel
+) {
+    val harvestState by harvestViewModel.state.collectAsState()
+    val fruits = result.fruits.sortedBy { fruit ->
+        if (fruit.displayId > 0) fruit.displayId else Int.MAX_VALUE
+    }
+    var highlightedId by remember { mutableStateOf<Int?>(null) }
+    ScreenScaffold(
+        title = stringResource(R.string.harvest_result_title),
+        onBack = onBack
+    ) { padding ->
+        ScrollScreen(
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .testTag("harvest_cluster_result")
+        ) {
+            SectionHeading(
+                title = stringResource(R.string.harvest_cluster_result_heading),
+                subtitle = stringResource(R.string.harvest_cluster_status_decided, fruits.size)
+            )
+            Spacer(Modifier.height(Spacing.sm))
+            StatusChip(text = stringResource(R.string.harvest_real_decision_chip))
+            Spacer(Modifier.height(Spacing.md))
+            DemoNotice(stringResource(R.string.harvest_cluster_disclaimer))
+            Spacer(Modifier.height(Spacing.md))
+            result.snapshot?.let { snapshot ->
+                Text(
+                    stringResource(R.string.harvest_cluster_snapshot_heading),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(Spacing.sm))
+                Text(
+                    stringResource(R.string.harvest_cluster_tap_to_highlight),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(Spacing.md))
+                ClusterSnapshotPanel(
+                    frame = snapshot,
+                    boxes = fruits.map { fruit ->
+                        ClusterDisplayBox(
+                            displayId = fruit.displayId,
+                            box = fruit.detection.boundingBox,
+                            highlighted = highlightedId != null && fruit.displayId == highlightedId
+                        )
+                    }
+                )
+                Spacer(Modifier.height(Spacing.md))
+            }
+            ResultFieldsCard {
+                Text(
+                    stringResource(
+                        R.string.harvest_cluster_overlay_status,
+                        fruits.size
+                    ),
+                    style = MaterialTheme.typography.headlineSmall,
+                    modifier = Modifier.testTag("harvest_cluster_count")
+                )
+                Spacer(Modifier.height(Spacing.md))
+                Text(
+                    stringResource(
+                        R.string.harvest_cluster_counts,
+                        ClusterScanSummary.readyCount(fruits),
+                        ClusterScanSummary.notReadyCount(fruits),
+                        ClusterScanSummary.uncertainCount(fruits)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+            fruits.forEach { fruit ->
+                val id = if (fruit.displayId > 0) fruit.displayId else 0
+                Spacer(Modifier.height(Spacing.section))
+                Text(
+                    stringResource(R.string.harvest_cluster_fruit_heading, id),
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { highlightedId = id }
+                        .testTag("harvest_cluster_fruit_$id")
+                )
+                Spacer(Modifier.height(Spacing.md))
+                ResultFieldsCard {
+                    Text(
+                        fruit.harvest.displayLabel,
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = harvestDecisionColor(
+                            fruit.harvest.decision,
+                            fruit.harvest.scanRequired
+                        ),
+                        modifier = Modifier.clickable { highlightedId = id }
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    ResultField(
+                        stringResource(R.string.harvest_field_ripeness_evidence),
+                        fruit.harvest.ripeness.label
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    ResultField(
+                        stringResource(R.string.harvest_field_maturity_reason),
+                        fruit.harvest.maturityReasonLabel
+                    )
+                    Spacer(Modifier.height(Spacing.md))
+                    ResultField(
+                        stringResource(R.string.harvest_field_quality_status),
+                        fruit.harvest.quality.label
+                    )
+                }
+            }
+            Spacer(Modifier.height(Spacing.section))
+            HarvestSessionSummaryCard(harvestState)
+            Spacer(Modifier.height(Spacing.section))
+            HarvestEnvironmentCard(harvestState)
         }
     }
 }

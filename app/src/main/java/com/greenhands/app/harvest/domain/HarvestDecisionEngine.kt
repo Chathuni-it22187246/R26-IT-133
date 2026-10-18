@@ -115,9 +115,10 @@ class HarvestDecisionEngine(
                 TomatoRipenessState.LIGHT_GREEN ->
                     HarvestDecision.READY_TO_HARVEST to TomatoHarvestReasons.DATE_REACHED_LIGHT_GREEN
                 TomatoRipenessState.GREEN_YELLOW_TRANSITION,
-                TomatoRipenessState.PREDOMINANTLY_RED_RIPE,
-                TomatoRipenessState.MIXED_UNCERTAIN ->
+                TomatoRipenessState.PREDOMINANTLY_RED_RIPE ->
                     HarvestDecision.READY_TO_HARVEST to TomatoHarvestReasons.DATE_REACHED_HARVEST_COLOUR
+                TomatoRipenessState.MIXED_UNCERTAIN ->
+                    HarvestDecision.UNCERTAIN to TomatoHarvestReasons.DATE_REACHED_MIXED_COLOUR
                 TomatoRipenessState.INSUFFICIENT ->
                     HarvestDecision.UNCERTAIN to TomatoHarvestReasons.INSUFFICIENT_FRAME
             }

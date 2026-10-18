@@ -4,7 +4,10 @@ data class TargetDetection(
     val targetType: ScanTargetType,
     val confidence: Float,
     val boundingBox: NormalizedRect,
-    val timestampMs: Long
+    val timestampMs: Long,
+    val classIndex: Int = -1,
+    val class0Score: Float? = null,
+    val class1Score: Float? = null
 )
 
 enum class TargetRejectReason {
@@ -62,7 +65,8 @@ data class TargetCaptureTick(
     val validation: TargetValidationResult,
     val detection: TargetDetection?,
     val shouldRequestFocus: Boolean,
-    val captureFrame: com.greenhands.app.harvest.domain.HarvestArgbFrame?
+    val captureFrame: com.greenhands.app.harvest.domain.HarvestArgbFrame?,
+    val stabilityStreak: Int = 0
 ) {
     fun <T> withCroppedFrame(block: (com.greenhands.app.harvest.domain.HarvestArgbFrame) -> T): T? =
         captureFrame?.let(block)

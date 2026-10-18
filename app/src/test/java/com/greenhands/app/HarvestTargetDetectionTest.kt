@@ -203,6 +203,7 @@ class HarvestTargetDetectionTest {
         }
         assertEquals(1, feedStable())
         controller.onFrame(frame, emptyList(), analyzing = false)
+        controller.onFrame(frame, emptyList(), analyzing = false)
         now += 400L
         assertEquals(0, feedStable())
         now += TargetDetectionCalibration.AUTO_CAPTURE_COOLDOWN_MS
@@ -286,6 +287,29 @@ class HarvestTargetDetectionTest {
         tracker.update(detection(ScanTargetType.TOMATO_FRUIT))
         assertEquals(1, tracker.consecutiveStableFrames)
         assertFalse(tracker.isStable())
+    }
+
+    @Test
+    fun centeredFruitIsPreferredOverHigherConfidenceOffCenterFruit() {
+        val offCenter = detection(
+            ScanTargetType.TOMATO_FRUIT,
+            confidence = 0.95f,
+            box = NormalizedRect(0.58f, 0.58f, 0.98f, 0.98f)
+        )
+        val centered = detection(
+            ScanTargetType.TOMATO_FRUIT,
+            confidence = 0.80f,
+            box = NormalizedRect(0.25f, 0.25f, 0.75f, 0.75f)
+        )
+        val result = validator.validate(
+            expected = ScanTargetType.TOMATO_FRUIT,
+            detections = listOf(offCenter, centered),
+            modelReady = true,
+            stable = true
+        )
+        assertTrue(result.readyForManualCapture)
+        assertEquals(centered.boundingBox, result.detection?.boundingBox)
+        assertEquals(0.80f, result.confidence, 0.001f)
     }
 
     @Test

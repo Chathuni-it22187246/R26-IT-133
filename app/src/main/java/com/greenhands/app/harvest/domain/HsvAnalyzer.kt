@@ -11,7 +11,7 @@ class HsvAnalyzer(
     private val centerCropFraction: Float = 0.55f
 ) {
     fun analyzeFruit(frame: HarvestArgbFrame): FruitColorMeasurement {
-        val stats = accumulate(frame)
+        val stats = accumulate(frame, fruitColourOnly = true)
         val n = stats.count.coerceAtLeast(1)
         return FruitColorMeasurement(
             sampledPixelCount = stats.count,
@@ -30,7 +30,7 @@ class HsvAnalyzer(
     }
 
     fun analyzeLeaf(frame: HarvestArgbFrame): LeafColorMeasurement {
-        val stats = accumulate(frame)
+        val stats = accumulate(frame, fruitColourOnly = false)
         val n = stats.count.coerceAtLeast(1)
         val discolored = stats.yellow + stats.brownDark + stats.whitePale
         return LeafColorMeasurement(
@@ -47,7 +47,7 @@ class HsvAnalyzer(
         )
     }
 
-    private fun accumulate(frame: HarvestArgbFrame): BinStats {
+    private fun accumulate(frame: HarvestArgbFrame, fruitColourOnly: Boolean): BinStats {
         val stats = BinStats()
         val insetX = ((1f - centerCropFraction) / 2f * frame.width).toInt()
         val insetY = ((1f - centerCropFraction) / 2f * frame.height).toInt()
@@ -60,11 +60,17 @@ class HsvAnalyzer(
             for (x in x0 until x1) {
                 val hsv = HsvConverter.fromArgb(frame.argb[row + x])
                 if (hsv.value < 0.06f) continue
+                val bin = HsvColorBins.classify(hsv)
+                if (fruitColourOnly &&
+                    (bin == HsvColorBin.WHITE_PALE || bin == HsvColorBin.OTHER)
+                ) {
+                    continue
+                }
                 stats.count++
                 stats.hueSum += hsv.hue
                 stats.satSum += hsv.saturation
                 stats.valSum += hsv.value
-                when (HsvColorBins.classify(hsv)) {
+                when (bin) {
                     HsvColorBin.GREEN -> {
                         stats.green++
                         stats.greenValSum += hsv.value

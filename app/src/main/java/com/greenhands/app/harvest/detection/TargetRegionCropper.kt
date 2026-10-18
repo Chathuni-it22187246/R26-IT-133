@@ -25,6 +25,6 @@ class TargetRegionCropper(
                 out[i++] = frame.argb[row + x]
             }
         }
-        return HarvestArgbFrame(out, width, height)
+        return HarvestArgbFrame(out, width, height, frame.rotationDegrees)
     }
 }

@@ -30,8 +30,39 @@ object YoloV8OutputParser {
         ),
         scoreFloor: Float = calibration.detectorScoreFloor,
         applySigmoidIfLogits: Boolean = true
-    ): List<TargetDetection> {
-        if (channels.size < BOX_CHANNELS + 1 || channels[0].isEmpty()) return emptyList()
+    ): List<TargetDetection> = parseChannelsFirstResult(
+        channels = channels,
+        inputWidth = inputWidth,
+        inputHeight = inputHeight,
+        transform = transform,
+        calibration = calibration,
+        timestampMs = timestampMs,
+        labels = labels,
+        scoreFloor = scoreFloor,
+        applySigmoidIfLogits = applySigmoidIfLogits
+    ).detections
+
+    /**
+     * Same decode + NMS as [parseChannelsFirst], plus pre-NMS counts.
+     * Does not change kept boxes or scores.
+     */
+    fun parseChannelsFirstResult(
+        channels: Array<FloatArray>,
+        inputWidth: Int,
+        inputHeight: Int,
+        transform: LetterboxTransform,
+        calibration: TargetDetectionCalibration = TargetDetectionCalibration.PROJECT,
+        timestampMs: Long,
+        labels: List<String> = listOf(
+            TargetDetectionLabels.TOMATO_FRUIT,
+            TargetDetectionLabels.TOMATO_LEAF
+        ),
+        scoreFloor: Float = calibration.detectorScoreFloor,
+        applySigmoidIfLogits: Boolean = true
+    ): YoloParseResult {
+        if (channels.size < BOX_CHANNELS + 1 || channels[0].isEmpty()) {
+            return YoloParseResult.EMPTY
+        }
         val activated = if (applySigmoidIfLogits) activatedClassChannels(channels) else channels
         val preds = activated[0].size
         val candidates = ArrayList<TargetDetection>(32)
@@ -49,16 +80,29 @@ object YoloV8OutputParser {
                 transform = transform
             )
             if (box.area <= 0f) continue
+            val class0 = activated.getOrNull(BOX_CHANNELS)?.getOrNull(i)
+            val class1 = activated.getOrNull(BOX_CHANNELS + 1)?.getOrNull(i)
             candidates.add(
                 TargetDetection(
                     targetType = type,
                     confidence = scored.score,
                     boundingBox = box,
-                    timestampMs = timestampMs
+                    timestampMs = timestampMs,
+                    classIndex = scored.classIndex,
+                    class0Score = class0,
+                    class1Score = class1
                 )
             )
         }
-        return nms(candidates, calibration.nmsIouThreshold)
+        val kept = nms(candidates, calibration.nmsIouThreshold)
+        val preFruit = candidates.count { it.targetType == ScanTargetType.TOMATO_FRUIT }
+        val preLeaf = candidates.count { it.targetType == ScanTargetType.TOMATO_LEAF }
+        return YoloParseResult(
+            detections = kept,
+            preNmsFruit = preFruit,
+            preNmsLeaf = preLeaf,
+            nmsDropped = (candidates.size - kept.size).coerceAtLeast(0)
+        )
     }
 
     fun parseDetectionsFirst(
@@ -150,18 +194,35 @@ object YoloV8OutputParser {
         channels: Int,
         predictions: Int,
         channelMajor: Boolean
+    ): Array<FloatArray> = fillChannelsFromFlat(
+        floats = floats,
+        channels = channels,
+        predictions = predictions,
+        channelMajor = channelMajor,
+        dest = null
+    )
+
+    fun fillChannelsFromFlat(
+        floats: FloatArray,
+        channels: Int,
+        predictions: Int,
+        channelMajor: Boolean,
+        dest: Array<FloatArray>?
     ): Array<FloatArray> {
-        val out = Array(channels) { FloatArray(predictions) }
+        val reusable = dest != null &&
+            dest.size == channels &&
+            dest.isNotEmpty() &&
+            dest[0].size == predictions
+        val out = if (reusable) dest!! else Array(channels) { FloatArray(predictions) }
         for (c in 0 until channels) {
+            val plane = out[c]
             for (i in 0 until predictions) {
                 val index = if (channelMajor) {
                     c * predictions + i
                 } else {
                     i * channels + c
                 }
-                if (index in floats.indices) {
-                    out[c][i] = floats[index]
-                }
+                plane[i] = if (index in floats.indices) floats[index] else 0f
             }
         }
         return out
@@ -268,3 +329,20 @@ object YoloV8OutputParser {
 
     private data class ClassScore(val classIndex: Int, val score: Float)
 }
+
+data class YoloParseResult(
+    val detections: List<TargetDetection>,
+    val preNmsFruit: Int,
+    val preNmsLeaf: Int,
+    val nmsDropped: Int
+) {
+    companion object {
+        val EMPTY = YoloParseResult(
+            detections = emptyList(),
+            preNmsFruit = 0,
+            preNmsLeaf = 0,
+            nmsDropped = 0
+        )
+    }
+}
+

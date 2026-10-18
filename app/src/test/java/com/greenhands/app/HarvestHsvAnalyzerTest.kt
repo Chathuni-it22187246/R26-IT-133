@@ -27,6 +27,29 @@ class HarvestHsvAnalyzerTest {
     }
 
     @Test
+    fun brightOrangeIsHarvestStageYellowNotRipeRed() {
+        val hsv = HsvConverter.fromRgb(230, 140, 20)
+        assertEquals(HsvColorBin.YELLOW, HsvColorBins.classify(hsv))
+    }
+
+    @Test
+    fun fruitAnalyzerIgnoresPaleBackgroundAroundRedFruit() {
+        val width = 40
+        val height = 40
+        val pixels = IntArray(width * height) { 0xFFF2F2F0.toInt() }
+        for (y in 8 until 32) {
+            for (x in 8 until 32) {
+                pixels[y * width + x] = 0xFFCC1A1A.toInt()
+            }
+        }
+        val result = HsvAnalyzer(centerCropFraction = 1f).analyzeFruit(
+            HarvestArgbFrame(pixels, width, height)
+        )
+        assertTrue(result.redPercent > 80f)
+        assertTrue(result.otherPercent < 10f)
+    }
+
+    @Test
     fun fruitAnalyzerReportsHighRedOnSolidRedFrame() {
         val frame = solidFrame(0xFFCC1A1A.toInt(), 40, 40)
         val result = HsvAnalyzer(centerCropFraction = 1f).analyzeFruit(frame)

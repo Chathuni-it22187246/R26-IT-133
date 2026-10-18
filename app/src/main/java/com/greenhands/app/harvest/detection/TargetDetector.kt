@@ -17,6 +17,9 @@ interface TargetDetector : AutoCloseable {
 
     fun detect(frame: HarvestArgbFrame, timestampMs: Long): List<TargetDetection>
 
+    fun detectTimed(frame: HarvestArgbFrame, timestampMs: Long): HarvestYoloDetectTiming =
+        HarvestYoloDetectTiming(detections = detect(frame, timestampMs))
+
     override fun close() = Unit
 }
 
