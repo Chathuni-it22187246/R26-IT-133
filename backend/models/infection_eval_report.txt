@@ -1,0 +1,120 @@
+GreenHands advanced infection detection — held-out evaluation
+Backbone: ImageNet MobileNetV2 1.0 224 float embedding (transfer learning).
+Heads trained on real PlantVillage leaves, real apple/orange photographs,
+PlantVillage background-without-leaves images, and held-out color/texture negatives.
+Near-duplicate leaves were grouped by average-hash before the split.
+
+TARGET TEST (ungated)
+label                         precision  recall  f1      support
+Leaf                             1.000   1.000   1.000      487
+Fruit                            0.994   0.994   0.994      160
+Other                            0.997   0.997   0.997      382
+confusion rows=true cols=pred
+        Leaf        Fruit        Other
+Leaf                  487            0            0
+Fruit                   0          159            1
+Other                   0            1          381
+macro F1 0.997  accuracy 0.998
+
+INFECTION TEST (ungated)
+label                         precision  recall  f1      support
+Healthy                          0.976   0.805   0.882      307
+Bacterial Leaf Spot              0.855   0.869   0.862       61
+Early Blight                     0.700   0.961   0.810       51
+Late Blight                      0.917   0.717   0.805       46
+Leaf Spot                        0.684   0.650   0.667       20
+Mosaic Virus                     0.667   1.000   0.800        6
+Powdery Mildew                   0.873   0.965   0.917       57
+Tomato Yellow Leaf Curl          0.944   0.895   0.919       19
+Unknown                          0.884   0.955   0.918      462
+confusion rows=true cols=pred
+     Healthy Bacterial Le Early Blight  Late Blight    Leaf Spot Mosaic Virus Powdery Mild Tomato Yello      Unknown
+Healthy               247            0            1            0            0            0            7            0           52
+Bacterial Le            1           53            3            1            1            0            0            1            1
+Early Blight            1            0           49            1            0            0            0            0            0
+Late Blight             0            1            9           33            2            0            0            0            1
+Leaf Spot               0            2            3            0           13            0            0            0            2
+Mosaic Virus            0            0            0            0            0            6            0            0            0
+Powdery Mild            0            1            0            0            0            0           55            0            1
+Tomato Yello            0            1            0            0            0            0            0           17            1
+Unknown                 4            4            5            1            3            3            1            0          441
+macro F1 0.842  accuracy 0.888
+
+Target gate chosen on validation: top1>=0.450 margin>=0.050 {'min_top': 0.45, 'min_margin': 0.05, 'fpr': 0.0, 'precision': 1.0, 'recall': 0.9978308026030369, 'accepted': 460}
+Infection gate chosen on validation: top1>=0.920 margin>=0.050 {'min_top': 0.92, 'min_margin': 0.05, 'fpr': 0.02877697841726619, 'precision': 0.918918918918919, 'recall': 0.576271186440678, 'accepted': 259}
+
+Quality thresholds from validation leaf sharpness/brightness and flat-negative texture:
+{
+  "texture_gradient": 18.0,
+  "min_texture_fill": 0.13420915712799167,
+  "min_frame_fill": 0.22,
+  "min_leaf_coverage": 0.18,
+  "min_fruit_coverage": 0.12,
+  "center_margin": 0.18,
+  "min_brightness": 75.18875396728515,
+  "max_brightness": 164.28035339355466,
+  "min_sharpness_target": 49.10489405969286,
+  "min_sharpness_infection": 172.45335457884997,
+  "input_divisor": 127.5,
+  "feature_size": 224.0,
+  "target_min_confidence": 0.45,
+  "target_min_margin": 0.05,
+  "infection_min_confidence": 0.92,
+  "infection_min_margin": 0.05
+}
+
+Gated non-plant false accept rate on test: 1/382 = 0.003
+Gated correct leaf diagnosis rate: 243/407 = 0.597
+scenario held-out leaf: target=Leaf infection=Healthy
+scenario dark leaf: quality rejected (lighting)
+scenario blurry leaf: quality rejected (blur)
+scenario distant leaf: quality rejected (lighting)
+scenario partial leaf: target=Leaf infection=None
+scenario held-out fruit: target=Fruit infection=Healthy
+scenario green flat_shift: quality rejected (blur)
+scenario green stripes_alt: quality rejected (lighting)
+scenario green speckle_alt: target=None infection=None
+scenario green checks_alt: quality rejected (lighting)
+scenario yellow flat_shift: quality rejected (blur)
+scenario yellow stripes_alt: target=None infection=None
+scenario yellow speckle_alt: target=None infection=None
+scenario yellow checks_alt: target=None infection=None
+scenario brown flat_shift: quality rejected (blur)
+scenario brown stripes_alt: quality rejected (lighting)
+scenario brown speckle_alt: target=None infection=None
+scenario brown checks_alt: quality rejected (lighting)
+scenario white flat_shift: quality rejected (lighting)
+scenario white stripes_alt: quality rejected (lighting)
+scenario white speckle_alt: quality rejected (lighting)
+scenario white checks_alt: quality rejected (lighting)
+scenario red flat_shift: quality rejected (blur)
+scenario red stripes_alt: quality rejected (lighting)
+scenario red speckle_alt: target=None infection=None
+scenario red checks_alt: quality rejected (lighting)
+scenario skin flat_shift: quality rejected (lighting)
+scenario skin stripes_alt: target=None infection=None
+scenario skin speckle_alt: quality rejected (lighting)
+scenario skin checks_alt: target=None infection=None
+scenario soil flat_shift: quality rejected (lighting)
+scenario soil stripes_alt: quality rejected (lighting)
+scenario soil speckle_alt: quality rejected (lighting)
+scenario soil checks_alt: quality rejected (lighting)
+scenario wall flat_shift: quality rejected (lighting)
+scenario wall stripes_alt: target=None infection=None
+scenario wall speckle_alt: quality rejected (lighting)
+scenario wall checks_alt: target=None infection=None
+scenario plastic flat_shift: quality rejected (blur)
+scenario plastic stripes_alt: target=None infection=None
+scenario plastic speckle_alt: target=None infection=None
+scenario plastic checks_alt: target=None infection=None
+
+Camera scenarios passed.
+none
+
+Shipped gates (after the camera-exposure check):
+target top1 >= 0.70, margin >= 0.15
+infection top1 >= 0.92, margin >= 0.10
+brightness 35..220, sharpness target >= 49.1, infection >= 172.5
+Leaf scores on real diseased leaves were about 1.00.
+Heavy blur sat near 31..84; real leaves started near 340.
+Color, skin, soil, and wall negatives scored Other/Unknown at about 1.00 and were not displayed.

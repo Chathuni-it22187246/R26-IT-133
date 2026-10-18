@@ -1,8 +1,36 @@
+# Unity (sensor placement)
 [Ll]ibrary/
 [Tt]emp/
+[Oo]bj/
 [Bb]uild/
 [Bb]uilds/
 [Ll]ogs/
+[Uu]ser[Ss]ettings/
 UserSettings/
 MemoryCaptures/
-obj/
+
+# Android / Gradle generated output and local IDE state
+.gradle/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.ap_
+*.aab
+output-metadata.json
+
+# Python generated files, virtual environments, and training caches
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+backend/.cache/
+
+# Local secrets and OS junk
+.env
+*.env
+.DS_Store
+Thumbs.db

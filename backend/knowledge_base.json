@@ -1,0 +1,156 @@
+{
+  "Powdery Mildew": {
+    "aliases": ["powdery mildew", "oidium", "white powdery fungus"],
+    "severity_default": "Moderate to High",
+    "immediate_action": [
+      "Isolate heavily infected plants and prune out the worst leaves with sterilized shears.",
+      "Increase greenhouse ventilation immediately to lower leaf-surface humidity.",
+      "Avoid overhead irrigation; switch to drip or sub-irrigation."
+    ],
+    "biological_treatment": [
+      "Apply Bacillus subtilis or Bacillus amyloliquefaciens biofungicide per label rates.",
+      "Use potassium bicarbonate or horticultural oil sprays during cooler parts of the day.",
+      "Introduce beneficial microbes via compost tea where permitted by local guidance."
+    ],
+    "chemical_control": [
+      "Rotate sulfur-based or potassium bicarbonate products early in the infection cycle.",
+      "Use labeled systemic fungicides (e.g., myclobutanil / trifloxystrobin group products) only when pressure is high, following PHI and resistance-management rules.",
+      "Never tank-mix incompatible oils and sulfur; observe temperature restrictions."
+    ],
+    "prevention": [
+      "Maintain plant spacing for airflow and remove lower canopy debris.",
+      "Keep relative humidity below ~85% overnight when crop stage allows.",
+      "Scout weekly and sanitize tools between plants and rows."
+    ],
+    "environmental_adjustments": [
+      "Raise night ventilation setpoint and enable dehumidification cycles.",
+      "Reduce dense shading that traps moisture on leaf surfaces.",
+      "Balance irrigation to avoid prolonged leaf wetness."
+    ],
+    "sources": [
+      "University plant pathology extension guidance (powdery mildew on greenhouse crops)",
+      "Agricultural extension IPM fact sheets"
+    ]
+  },
+  "Late Blight": {
+    "aliases": ["late blight", "phytophthora infestans"],
+    "severity_default": "Critical",
+    "immediate_action": [
+      "Remove and destroy infected foliage immediately; do not compost symptomatic material.",
+      "Restrict movement between infected and clean zones; sanitize footwear and tools.",
+      "Reduce leaf wetness duration with ventilation and irrigation timing changes."
+    ],
+    "biological_treatment": [
+      "Deploy copper alternatives / biofungicides labeled for Phytophthora where available as a first soft response.",
+      "Support plant vigor with balanced nutrition; avoid excess nitrogen that creates soft tissue."
+    ],
+    "chemical_control": [
+      "Apply protectant fungicides (e.g., chlorothalonil / mancozeb-class products where legal) on a tight schedule during weather conducive to blight.",
+      "Rotate FRAC groups; include systemic materials labeled for late blight when risk is extreme.",
+      "Follow local extension spray alerts and pre-harvest intervals strictly."
+    ],
+    "prevention": [
+      "Use certified clean transplants and resistant cultivars when available.",
+      "Eliminate volunteer hosts and cull piles near the greenhouse.",
+      "Monitor forecasts for cool, wet conditions that favor Phytophthora."
+    ],
+    "environmental_adjustments": [
+      "Keep canopy dry; run fans and open vents after irrigation or fog events.",
+      "Avoid dense plantings and prolonged RH spikes above 90%.",
+      "Improve drainage under benches and eliminate standing water."
+    ],
+    "sources": [
+      "USDA / university late blight alerts and IPM manuals",
+      "Extension plant pathology databases"
+    ]
+  },
+  "Bacterial Blight": {
+    "aliases": ["bacterial blight", "bacterial leaf spot", "xanthomonas"],
+    "severity_default": "High",
+    "immediate_action": [
+      "Remove symptomatic leaves and avoid working plants when foliage is wet.",
+      "Disinfect pruning tools between plants with 70% alcohol or approved sanitizer.",
+      "Quarantine new introductions until scouted clean."
+    ],
+    "biological_treatment": [
+      "Apply copper-alternative biologicals and antagonistic bacteria products labeled for bacterial diseases.",
+      "Use induced-resistance products where crop labels allow."
+    ],
+    "chemical_control": [
+      "Copper bactericides or fixed-copper formulations on a preventive schedule during humid weather.",
+      "Avoid overuse that risks phytotoxicity; follow label rates for greenhouse crops."
+    ],
+    "prevention": [
+      "Start with disease-free seed/transplants and resistant varieties.",
+      "Minimize splash irrigation and worker traffic through wet canopies.",
+      "Sanitize benches, trays, and irrigation emitters between cycles."
+    ],
+    "environmental_adjustments": [
+      "Lower humidity and increase air exchange after irrigation.",
+      "Space plants to speed canopy drying.",
+      "Keep night temperatures from encouraging condensation on leaves."
+    ],
+    "sources": [
+      "Extension bacterial disease management guides",
+      "Greenhouse IPM handbooks"
+    ]
+  },
+  "Fungal Infection": {
+    "aliases": ["fungal infection", "leaf mold", "botrytis", "gray mold"],
+    "severity_default": "Moderate",
+    "immediate_action": [
+      "Sanitize dead flowers and senescent leaves that act as infection centers.",
+      "Increase airflow and reduce free moisture on flowers and leaves.",
+      "Spot-treat early lesions before canopy closure."
+    ],
+    "biological_treatment": [
+      "Apply Trichoderma / Bacillus-based biofungicides preventively.",
+      "Use biologicals in rotation to reduce chemical reliance."
+    ],
+    "chemical_control": [
+      "Rotate labeled greenhouse fungicides by FRAC code.",
+      "Target flower and fruit zones carefully for Botrytis-prone crops."
+    ],
+    "prevention": [
+      "Avoid prolonged high humidity and dense canopies.",
+      "Harvest promptly; remove aborted fruit and petals.",
+      "Keep walkways and floors free of plant debris."
+    ],
+    "environmental_adjustments": [
+      "Program humidity spikes down with heating + venting pulses.",
+      "Irrigate in the morning so foliage dries before night.",
+      "Reduce fogging frequency during cool cloudy periods."
+    ],
+    "sources": [
+      "Greenhouse fungal disease extension bulletins"
+    ]
+  },
+  "Default": {
+    "aliases": [],
+    "severity_default": "Moderate",
+    "immediate_action": [
+      "Confirm diagnosis with clear photos or lab sampling if symptoms are atypical.",
+      "Isolate affected plants and increase scouting frequency to every 24–48 hours.",
+      "Record temperature, humidity, and irrigation events around symptom onset."
+    ],
+    "biological_treatment": [
+      "Begin with labeled biological protectants suitable for the crop and symptom class.",
+      "Support beneficial microbial balance in the root zone and phyllosphere."
+    ],
+    "chemical_control": [
+      "Select only products labeled for the crop and suspected pathogen; rotate modes of action.",
+      "Consult local extension before broad-spectrum chemical programs."
+    ],
+    "prevention": [
+      "Maintain sanitation, clean transplants, and worker hygiene protocols.",
+      "Keep climate within crop-optimal bands to reduce abiotic stress that invites disease."
+    ],
+    "environmental_adjustments": [
+      "Stabilize VPD, avoid leaf wetness, and ensure adequate air movement.",
+      "Review shading and irrigation schedules for stress reduction."
+    ],
+    "sources": [
+      "General agricultural extension IPM frameworks"
+    ]
+  }
+}

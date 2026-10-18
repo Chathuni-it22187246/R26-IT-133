@@ -1,0 +1,9 @@
+Healthy
+Bacterial Leaf Spot
+Early Blight
+Late Blight
+Leaf Spot
+Mosaic Virus
+Powdery Mildew
+Tomato Yellow Leaf Curl
+Unknown

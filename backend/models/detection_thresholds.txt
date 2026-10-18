@@ -1,0 +1,22 @@
+# Gates for Advanced Infection Detection.
+# Confidence values are model probabilities and are not inflated.
+# Brightness is wider than the PlantVillage exposure range so a sunlit
+# camera frame is not rejected only because it is brighter than that dataset.
+# Sharpness sits between heavy blur (90th percentile about 84) and real
+# leaves (5th percentile about 340) measured on the same 64x64 reduction.
+texture_gradient=18
+min_texture_fill=0.134209
+min_frame_fill=0.22
+min_leaf_coverage=0.18
+min_fruit_coverage=0.12
+center_margin=0.18
+min_brightness=35
+max_brightness=220
+min_sharpness_target=49.1049
+min_sharpness_infection=172.453
+input_divisor=127.5
+feature_size=224
+target_min_confidence=0.70
+target_min_margin=0.15
+infection_min_confidence=0.92
+infection_min_margin=0.10
